@@ -1,0 +1,122 @@
+<Page
+    x:Class="Vianigram.App.Pages.Compose.ForwardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Vianigram.App.Controls"
+    xmlns:conv="using:Vianigram.App.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:ForwardPageViewModel, IsDesignTimeCreatable=True}"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Forward to..."
+                   FontSize="28"
+                   FontWeight="SemiBold"
+                   Margin="20,12,20,8" />
+
+        <!-- Source preview -->
+        <Border Grid.Row="1"
+                Margin="20,4,20,8"
+                Padding="12,10,12,10"
+                CornerRadius="12"
+                Background="{ThemeResource ListViewItemPlaceholderBackgroundThemeBrush}"
+                BorderBrush="{ThemeResource ListViewItemSelectedBackgroundThemeBrush}"
+                BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="{Binding SourceSenderName}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                <TextBlock Text="{Binding SourcePreview}"
+                           FontSize="14"
+                           TextWrapping="Wrap"
+                           Margin="0,2,0,0"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                <TextBlock Text="{Binding SourceTimeLabel}"
+                           FontSize="11"
+                           Opacity="0.6"
+                           HorizontalAlignment="Right"
+                           Margin="0,4,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Search -->
+        <TextBox Grid.Row="2"
+                 Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 PlaceholderText="Search chats"
+                 Margin="20,4,20,4" />
+
+        <!-- Status -->
+        <TextBlock Grid.Row="3"
+                   Text="{Binding StatusText}"
+                   FontSize="13"
+                   Opacity="0.7"
+                   Margin="20,4,20,4" />
+
+        <!-- Dialog list -->
+        <ListView Grid.Row="4"
+                  x:Name="DialogList"
+                  ItemsSource="{Binding Dialogs}"
+                  SelectionMode="Multiple"
+                  IsItemClickEnabled="True"
+                  ItemClick="OnDialogClicked">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="8,4,8,4" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <controls:ChatListItem Title="{Binding DisplayName}"
+                                           Initials="{Binding AvatarLetter}"
+                                           AvatarColorSeed="{Binding AvatarColorSeed}"
+                                           LastMessagePreview="{Binding SubtitleText}" />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Comment -->
+        <TextBox Grid.Row="5"
+                 Text="{Binding Comment, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 PlaceholderText="Add a comment (optional)"
+                 Margin="20,4,20,4" />
+
+        <Grid Grid.Row="6" Margin="20,4,20,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="{Binding ErrorMessage}"
+                       Foreground="Red"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"
+                       Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+
+            <Button Grid.Column="1"
+                    Content="Send"
+                    Command="{Binding SendCommand}"
+                    HorizontalAlignment="Stretch" />
+        </Grid>
+    </Grid>
+</Page>

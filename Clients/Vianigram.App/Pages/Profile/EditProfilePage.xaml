@@ -1,0 +1,112 @@
+<Page
+    x:Class="Vianigram.App.Pages.Profile.EditProfilePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:EditProfilePageViewModel, IsDesignTimeCreatable=True}"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}"
+              Height="56">
+            <TextBlock Text="Edit Profile"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                       VerticalAlignment="Center"
+                       Margin="20,0,0,0" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="16,16,16,16">
+
+                <!-- First name -->
+                <TextBlock Text="First name"
+                           FontSize="14"
+                           Opacity="0.7"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                           Margin="0,0,0,4" />
+                <TextBox Text="{Binding FirstName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="First name"
+                         FontSize="16"
+                         Margin="0,0,0,16" />
+
+                <!-- Last name -->
+                <TextBlock Text="Last name"
+                           FontSize="14"
+                           Opacity="0.7"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                           Margin="0,0,0,4" />
+                <TextBox Text="{Binding LastName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="Last name"
+                         FontSize="16"
+                         Margin="0,0,0,16" />
+
+                <!-- Username -->
+                <TextBlock Text="Username"
+                           FontSize="14"
+                           Opacity="0.7"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                           Margin="0,0,0,4" />
+                <TextBox Text="{Binding Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="Username"
+                         FontSize="16"
+                         Margin="0,0,0,16" />
+
+                <!-- Bio -->
+                <TextBlock Text="Bio"
+                           FontSize="14"
+                           Opacity="0.7"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                           Margin="0,0,0,4" />
+                <TextBox Text="{Binding Bio, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="A few words about yourself"
+                         FontSize="16"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Height="80"
+                         Margin="0,0,0,24" />
+
+                <!-- Save -->
+                <Button Content="Save"
+                        Command="{Binding SaveCommand}"
+                        IsEnabled="{Binding CanSave}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Background="{ThemeResource SystemControlHighlightAccentBrush}"
+                        Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                        Padding="16,12"
+                        Margin="0,0,0,12" />
+
+                <ProgressRing IsActive="{Binding IsSaving}"
+                              Width="24"
+                              Height="24"
+                              HorizontalAlignment="Center"
+                              Margin="0,0,0,8" />
+
+                <TextBlock Text="{Binding StatusText}"
+                           FontSize="14"
+                           Opacity="0.7"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                           HorizontalAlignment="Center" />
+
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="Red"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0"
+                           Visibility="{Binding HasError}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

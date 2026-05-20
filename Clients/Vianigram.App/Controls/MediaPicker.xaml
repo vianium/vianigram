@@ -1,0 +1,83 @@
+<UserControl
+    x:Class="Vianigram.App.Controls.MediaPicker"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Visibility="Collapsed">
+
+    <Grid x:Name="RootGrid" Background="#80000000">
+        <Grid VerticalAlignment="Bottom"
+              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <GridView x:Name="RecentItemsGrid"
+                      Grid.Row="0"
+                      Padding="8"
+                      Height="160"
+                      SelectionMode="None"
+                      IsItemClickEnabled="True">
+                <GridView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Width="120"
+                                Height="120"
+                                Margin="4"
+                                Background="{ThemeResource ListViewItemPlaceholderBackgroundThemeBrush}"
+                                CornerRadius="4">
+                            <Image Source="{Binding ImageSource}"
+                                   Stretch="UniformToFill" />
+                        </Border>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsStackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </GridView.ItemsPanel>
+            </GridView>
+
+            <StackPanel Grid.Row="1" Margin="12,4,12,12">
+                <Button x:Name="CameraButton"
+                        Tag="Camera"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,4"
+                        Background="Transparent">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE114;"
+                                   FontFamily="Segoe UI Symbol"
+                                   FontSize="22"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                        <TextBlock Text="Camera"
+                                   FontSize="17"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="FileButton"
+                        Tag="File"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,4"
+                        Background="Transparent">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE160;"
+                                   FontFamily="Segoe UI Symbol"
+                                   FontSize="22"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                        <TextBlock Text="File"
+                                   FontSize="17"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,88 @@
+<!--
+    Typography.xaml — Vianigram type scale.
+
+    Mirrors the t-page-title / t-app-name CSS variables defined in
+    docs/design_system/tokens.css.
+    All sizes in DIPs (1 DIP ≈ 1px on a 100% display). FontWeight 300 = Light,
+    400 = Normal, 600 = SemiBold. CharacterSpacing is in 1/1000 of an em.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 40px / line 44 / Light. Hero title ("your number", "settings"). -->
+    <Style x:Key="VgPageTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+        <Setter Property="FontSize" Value="40" />
+        <Setter Property="FontWeight" Value="Light" />
+        <Setter Property="LineHeight" Value="44" />
+        <Setter Property="CharacterSpacing" Value="0" />
+        <Setter Property="Foreground" Value="{ThemeResource VgFgBrush}" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+    </Style>
+
+    <!-- 14px / line 18 / Light, uppercase, wide tracking. App-name strap. -->
+    <Style x:Key="VgAppNameStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Light" />
+        <Setter Property="LineHeight" Value="18" />
+        <Setter Property="CharacterSpacing" Value="180" />
+        <Setter Property="Foreground" Value="{ThemeResource VgFg2Brush}" />
+    </Style>
+
+    <!-- 26px / line 30 / Light. Pivot headers. -->
+    <Style x:Key="VgPivotStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontWeight" Value="Light" />
+        <Setter Property="LineHeight" Value="30" />
+        <Setter Property="CharacterSpacing" Value="0" />
+        <Setter Property="Foreground" Value="{ThemeResource VgFgBrush}" />
+    </Style>
+
+    <!-- 22px / line 26 / Light. Section headers. -->
+    <Style x:Key="VgSectionStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontWeight" Value="Light" />
+        <Setter Property="LineHeight" Value="26" />
+        <Setter Property="Foreground" Value="{ThemeResource VgFgBrush}" />
+    </Style>
+
+    <!-- 17px / line 20 / Normal. List-row title. -->
+    <Style x:Key="VgRowTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="LineHeight" Value="20" />
+        <Setter Property="Foreground" Value="{ThemeResource VgFgBrush}" />
+    </Style>
+
+    <!-- 15px / line 20 / Normal. Body copy. -->
+    <Style x:Key="VgBodyStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="LineHeight" Value="20" />
+        <Setter Property="Foreground" Value="{ThemeResource VgFgBrush}" />
+    </Style>
+
+    <!-- 12px / line 16 / Normal, secondary foreground. Captions, helper text. -->
+    <Style x:Key="VgCaptionStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="LineHeight" Value="16" />
+        <Setter Property="Foreground" Value="{ThemeResource VgFg2Brush}" />
+    </Style>
+
+    <!-- 11px / line 14 / Normal, tertiary foreground. Meta, timestamps. -->
+    <Style x:Key="VgMetaStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="LineHeight" Value="14" />
+        <Setter Property="Foreground" Value="{ThemeResource VgFg3Brush}" />
+    </Style>
+</ResourceDictionary>

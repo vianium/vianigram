@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{E1F2A3B4-C5D6-4E7F-8901-A2B3C4D5E6F0}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vianigram.SmokeTests</RootNamespace>
+    <AssemblyName>Vianigram.SmokeTests</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
+    <SynthesizeLinkMetadata>true</SynthesizeLinkMetadata>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\AnyCPU\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\AnyCPU\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SmokeTestRunner.cs" />
+    <Compile Include="Tests\DeterministicSmokeCache.cs" />
+    <Compile Include="Tests\CryptoSelfTestSmoke.cs" />
+    <Compile Include="Tests\TlSelfTestSmoke.cs" />
+    <Compile Include="Tests\MtProtoSelfTestSmoke.cs" />
+    <Compile Include="Tests\LiveAuthKeyCache.cs" />
+    <Compile Include="Tests\LiveSmokeTestSupport.cs" />
+    <Compile Include="Tests\MtProtoHandshakeSmokeTest.cs" />
+    <Compile Include="Tests\MtProtoSessionPoolSmokeTest.cs" />
+    <Compile Include="Tests\MsgIdReplayTest.cs" />
+    <Compile Include="Tests\OpusDecoderSmokeTest.cs" />
+    <Compile Include="Tests\WebpDecoderSmokeTest.cs" />
+    <Compile Include="Tests\CallsTlSmokeTest.cs" />
+    <Compile Include="Tests\PeerCacheSmokeTest.cs" />
+    <Compile Include="Tests\ProxyConfigSmokeTest.cs" />
+    <Compile Include="Tests\MtProxyRuntimeSmokeTest.cs" />
+    <Compile Include="Tests\ProxyPersistenceSmokeTest.cs" />
+    <Compile Include="Tests\SqliteStorageSmokeTest.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+    <Reference Include="System.Runtime.WindowsRuntime" />
+    <Reference Include="System.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Account\Vianigram.Account.csproj">
+      <Project>{B1C2D3E4-F5A6-4B7C-8D90-E1F2A3B4C5D6}</Project>
+      <Name>Vianigram.Account</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Calls\Vianigram.Calls.csproj">
+      <Project>{BACBE2ED-2DDF-4FFB-B106-DAEBFCADBECF}</Project>
+      <Name>Vianigram.Calls</Name>
+    </ProjectReference>
+    <!-- ProxyConfigSmokeTest + ProxyPersistenceSmokeTest exercise the
+         ProxyConfig value object + parser that live in Vianigram.Settings. -->
+    <ProjectReference Include="..\..\Core\Vianigram.Settings\Vianigram.Settings.csproj">
+      <Project>{C1DCF300-4FF1-4F1D-D208-FCADBECFD0E1}</Project>
+      <Name>Vianigram.Settings</Name>
+    </ProjectReference>
+    <!-- CryptoSelfTestSmoke exercises Vianium.Crypto.CryptoSelfTest.RunAll(),
+         the WinRT projection of vianium-crypto's KAT harness. -->
+    <ProjectReference Include="..\..\..\vianium-crypto\winrt\Vianium.Core.Crypto.WinRT.vcxproj">
+      <Project>{B1C2D3E4-F5A6-47B8-9C0D-1E2F3A4B5C6D}</Project>
+      <Name>Vianium.Core.Crypto.WinRT</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+    <!-- Vianium.Core.Crypto is a StaticLibrary linked into the WinRT DLLs;
+         no direct managed ProjectReference (would warn "component not found"). -->
+    <ProjectReference Include="..\..\..\vianium-mtproto\Vianium.Tl.vcxproj">
+      <Project>{D2E3F4A5-B6C7-4D8E-9F01-A2B3C4D5E6F7}</Project>
+      <Name>Vianium.Tl</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\vianium-mtproto\Vianium.MTProto.vcxproj">
+      <Project>{D3E4F5A6-B7C8-4D9E-9F01-A3B4C5D6E7F8}</Project>
+      <Name>Vianium.MTProto</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Core.Media\Vianigram.Core.Media.vcxproj">
+      <Project>{D4E5F6A7-B8C9-4DAE-AF12-B4C5D6E7F8AA}</Project>
+      <Name>Vianigram.Core.Media</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Composition\Vianigram.Composition.csproj">
+      <Project>{9A1B2C3D-0002-4002-8000-000000000002}</Project>
+      <Name>Vianigram.Composition</Name>
+    </ProjectReference>
+    <!-- SQLite-backed storage smoke test exercises the native
+         sqlite3.dll bundled by the SQLite.WP81 ExtensionSDK below. -->
+    <ProjectReference Include="..\..\Core\Vianigram.Storage\Vianigram.Storage.csproj">
+      <Project>{B5C6D7E8-F9AA-4BBD-CF01-E5F6A7B8C9DA}</Project>
+      <Name>Vianigram.Storage</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <!-- Note: the native sqlite3.dll comes from the SQLite.WP81
+       Extension SDK referenced by the consuming AppContainerExe projects
+       (Vianigram.App, Vianigram.SmokeRunner.App). Class libraries do not
+       package native binaries, so no SDKReference is added here. The C# layer
+       (Vianigram.Storage) P/Invokes against "sqlite3" at runtime once the
+       host loads the DLL. -->
+
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
+    <VisualStudioVersion>14.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

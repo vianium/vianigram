@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// SPDX-FileCopyrightText: 2026 Angel Careaga <hello@angelcareaga.com>
+//
+// EXAMPLE — copy this file to `TelegramAppConfig.Local.cs` (without the
+// `.example` suffix) and replace the placeholder values with the
+// `api_id` / `api_hash` issued for your app at https://my.telegram.org.
+//
+// The actual `TelegramAppConfig.Local.cs` is gitignored. Do NOT commit it.
+// Telegram's Terms of Service forbid publishing app credentials.
+
+namespace Vianigram.Composition.Configuration
+{
+    internal static partial class TelegramAppConfig
+    {
+        static partial void InitializeFromLocal()
+        {
+            // _apiId  = 1234567;
+            // _apiHash = "00000000000000000000000000000000";
+        }
+    }
+}

@@ -1,0 +1,123 @@
+<Page
+    x:Class="Vianigram.App.Pages.ExpiredPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource VgBgBrush}">
+
+    <!--
+        ExpiredPage — gate shown when BuildExpiry.IsExpired() returns true.
+        The shell is never instantiated in that path; this page replaces
+        the entire navigation root so the user cannot reach Welcome /
+        chats / settings / profile / calls / anything. It nudges them to
+        the Telegram channel where the next build is announced.
+
+        The expiration date is filled in by code-behind in OnNavigatedTo
+        from BuildExpiry.GetLocalExpirationString().
+    -->
+
+    <Grid Margin="24,40,24,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="VIANIGRAM"
+                   FontFamily="{StaticResource VgFont}"
+                   FontSize="11"
+                   FontWeight="SemiBold"
+                   CharacterSpacing="180"
+                   Foreground="{ThemeResource VgFg2Brush}"
+                   Margin="0,0,0,4" />
+
+        <TextBlock Grid.Row="1"
+                   x:Uid="ExpiredPageHeader"
+                   Text="expired build"
+                   FontFamily="{StaticResource VgFont}"
+                   FontSize="40"
+                   FontWeight="Light"
+                   Foreground="{ThemeResource VgFgBrush}"
+                   Margin="0,0,0,12" />
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Hidden">
+            <StackPanel Margin="0,12,0,40">
+
+                <!-- Big diamond accent (matches WelcomePage hero treatment). -->
+                <Border Width="56" Height="56"
+                        Background="{ThemeResource VgAccentBrush}"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,28">
+                    <Border.RenderTransform>
+                        <RotateTransform Angle="45" CenterX="28" CenterY="28" />
+                    </Border.RenderTransform>
+                </Border>
+
+                <TextBlock x:Uid="ExpiredPageTitle"
+                           Text="This alpha has expired"
+                           FontFamily="{StaticResource VgFont}"
+                           FontSize="32"
+                           FontWeight="Light"
+                           Foreground="{ThemeResource VgFgBrush}"
+                           Margin="0,0,0,16"
+                           TextWrapping="Wrap" />
+
+                <!-- Body — explains why the gate fires + what to do. -->
+                <TextBlock x:Uid="ExpiredPageBody"
+                           Text="Vianigram is a public alpha with a limited lifetime. We're iterating fast and need testers on the latest build for feedback to stay useful. Grab the new build from the Telegram channel to keep using the app."
+                           FontFamily="{StaticResource VgFont}"
+                           FontSize="15"
+                           Foreground="{ThemeResource VgFg2Brush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,16" />
+
+                <!-- Expiration date row — caption + formatted local
+                     date (filled by code-behind). -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,28">
+                    <TextBlock x:Uid="ExpiredPageDateLabel"
+                               Text="Expired on:"
+                               FontFamily="{StaticResource VgFont}"
+                               FontSize="13"
+                               Foreground="{ThemeResource VgFg2Brush}"
+                               Margin="0,0,6,0" />
+                    <TextBlock x:Name="ExpirationDateText"
+                               FontFamily="{StaticResource VgFont}"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{ThemeResource VgFgBrush}" />
+                </StackPanel>
+
+                <!-- Telegram channel = primary call to action. -->
+                <Button x:Name="TelegramButton"
+                        x:Uid="ExpiredPageTelegramButton"
+                        Content="download new build (Telegram)"
+                        Style="{StaticResource VgButtonPrimaryStyle}"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,0,8"
+                        Click="OnTelegramClicked" />
+
+                <!-- Buy me a coffee (secondary). -->
+                <Button x:Name="DonateButton"
+                        x:Uid="ExpiredPageDonateButton"
+                        Content="buy me a coffee"
+                        Style="{StaticResource VgButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,0,28"
+                        Click="OnDonateClicked" />
+
+                <!-- Footer — small print. -->
+                <TextBlock x:Uid="ExpiredPageFooter"
+                           Text="Reinstalling or updating preserves your session, dialog cache and settings. The next alpha ships with the expiration date pushed forward."
+                           FontFamily="{StaticResource VgFont}"
+                           FontSize="11"
+                           Foreground="{ThemeResource VgFg3Brush}"
+                           TextWrapping="Wrap"
+                           Opacity="0.7" />
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

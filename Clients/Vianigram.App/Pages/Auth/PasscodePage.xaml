@@ -1,0 +1,86 @@
+<Page
+    x:Class="Vianigram.App.Pages.Auth.PasscodePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:PasscodePageViewModel, IsDesignTimeCreatable=True}"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}"
+                Padding="16,14">
+            <TextBlock Text="Enter passcode"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                       VerticalAlignment="Center" />
+        </Border>
+
+        <StackPanel Grid.Row="1"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Margin="24,0,24,0">
+            <TextBlock Text="Vianigram lock"
+                       FontSize="22"
+                       FontWeight="SemiLight"
+                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,18" />
+
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,12">
+                <PasswordBox PasswordChar="*"
+                             MaxLength="1"
+                             Width="48"
+                             Margin="6,0"
+                             FontSize="22"
+                             Password="{Binding Pin1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <PasswordBox PasswordChar="*"
+                             MaxLength="1"
+                             Width="48"
+                             Margin="6,0"
+                             FontSize="22"
+                             Password="{Binding Pin2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <PasswordBox PasswordChar="*"
+                             MaxLength="1"
+                             Width="48"
+                             Margin="6,0"
+                             FontSize="22"
+                             Password="{Binding Pin3, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <PasswordBox PasswordChar="*"
+                             MaxLength="1"
+                             Width="48"
+                             Margin="6,0"
+                             FontSize="22"
+                             Password="{Binding Pin4, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
+            <TextBlock Text="{Binding ErrorMessage, Mode=OneWay}"
+                       Foreground="{ThemeResource SystemControlErrorTextForegroundBrush}"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,16" />
+
+            <Button Content="Confirm"
+                    Command="{Binding ConfirmCommand}"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,0,0,10" />
+
+            <Button Content="Forgot passcode"
+                    Command="{Binding ForgotCommand}"
+                    Background="Transparent"
+                    Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                    HorizontalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</Page>

@@ -1,0 +1,156 @@
+<Page
+    x:Class="Vianigram.App.Pages.ChatListPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Vianigram.App.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource VgBgBrush}">
+
+    <Page.Resources>
+        <!-- Item template — shared by the four tab ListViews. Each tab
+             binds to its OWN ObservableCollection<DialogRow> so a
+             pivot swipe is "free" (no Clear/Add cycle). The same
+             DialogRow instance lives in every applicable collection,
+             so a row mutation fires PropertyChanged once and every
+             visible projection reflects it simultaneously. -->
+        <DataTemplate x:Key="DialogRowTemplate">
+            <controls:ChatListItem AvatarSource="{Binding AvatarSource}"
+                                   AvatarBitmap="{Binding AvatarBitmap}"
+                                   Initials="{Binding Initials}"
+                                   AvatarColorSeed="{Binding AvatarColorSeed}"
+                                   Title="{Binding Title}"
+                                   LastMessagePreview="{Binding StatusOrLastMessage}"
+                                   Timestamp="{Binding TimestampLabel}"
+                                   UnreadCount="{Binding UnreadCount}"
+                                   IsPinned="{Binding IsPinned}"
+                                   IsMuted="{Binding IsMuted}"
+                                   OnlineStatus="{Binding OnlineStatus}" />
+        </DataTemplate>
+
+        <Style x:Key="DialogListStyle" TargetType="ListView">
+            <Setter Property="SelectionMode" Value="None" />
+            <Setter Property="IsItemClickEnabled" Value="True" />
+            <Setter Property="ItemTemplate" Value="{StaticResource DialogRowTemplate}" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource VgStretchListViewItemStyle}" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Hidden" />
+            <Setter Property="Padding" Value="0,0,0,12" />
+            <!-- Defer expensive bindings (avatar source, color seed) until
+                 the container is
+                 actually about to be displayed. ContainerContentChanging
+                 lets us hook into the realisation pipeline; the handler
+                 in code-behind walks the visual tree only when a row
+                 enters the viewport. Combined with the implicit
+                 VirtualizingStackPanel, this makes scrolling feel
+                 native even with 200+ dialogs. -->
+            <Setter Property="ScrollViewer.IsHorizontalScrollChainingEnabled" Value="False" />
+        </Style>
+    </Page.Resources>
+
+    <!-- AppBar: Search + New Chat. The legacy "Refresh" button is gone —
+         IChatsApi.DialogChanged + the deferred MtProtoUpdatesAdapter push
+         feed live updates without manual pulls, and we now wire the more
+         useful affordances (start a chat, find a chat). The "calls" button
+         lives under the secondary commands so it's reachable but doesn't
+         compete with the primary actions. -->
+    <Page.BottomAppBar>
+        <CommandBar>
+            <AppBarButton x:Name="SearchButton"
+                          Label="search"
+                          Icon="Find"
+                          Click="OnSearchClicked" />
+            <AppBarButton x:Name="NewChatButton"
+                          Label="new chat"
+                          Icon="Add"
+                          Click="OnNewChatClicked" />
+            <CommandBar.SecondaryCommands>
+                <AppBarButton x:Name="CallsMenuButton"
+                              Label="calls"
+                              Click="OnCallsClicked" />
+                <AppBarButton x:Name="ContactsMenuButton"
+                              Label="contacts"
+                              Click="OnContactsClicked" />
+                <AppBarButton x:Name="SettingsMenuButton"
+                              Label="settings"
+                              Click="OnSettingsClicked" />
+                <AppBarButton x:Name="RefreshMenuButton"
+                              Label="refresh"
+                              Click="OnRefreshClicked" />
+            </CommandBar.SecondaryCommands>
+        </CommandBar>
+    </Page.BottomAppBar>
+
+    <Grid Background="{ThemeResource VgBgBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header: just the "VIANIGRAM" wordmark. The "chats" page-title
+             that used to live below is implicit — the four pivot tabs
+             (all/unread/personal/groups) make it obvious what content
+             this surface lists. Dropping the title reclaims ~52 px of
+             vertical space which goes to extra dialog rows. -->
+        <TextBlock Grid.Row="0"
+                   Text="VIANIGRAM"
+                   FontFamily="{StaticResource VgFont}"
+                   FontSize="11"
+                   FontWeight="SemiBold"
+                   CharacterSpacing="180"
+                   Foreground="{ThemeResource VgFg2Brush}"
+                   Margin="20,18,20,12" />
+
+        <!-- Pivot: 4 tabs (all / unread / personal / groups).
+             Each PivotItem binds to a tab-specific ObservableCollection
+             (DialogsAll, DialogsUnread,
+             DialogsPersonal, DialogsGroups). DialogRow instances are
+             shared across all four — a single mutation fires
+             PropertyChanged once and every projection updates
+             simultaneously. Switching tabs is a no-op for the VM
+             (no Clear/Add cycle, no virtualization reset). -->
+        <Pivot Grid.Row="1"
+               x:Name="MainPivot"
+               SelectionChanged="OnPivotSelectionChanged"
+               Title=""
+               Margin="0,0,0,0">
+            <PivotItem Header="all" Margin="8,0,0,0">
+                <ListView x:Name="DialogListAll"
+                          Style="{StaticResource DialogListStyle}"
+                          ItemsSource="{Binding DialogsAll}"
+                          ItemClick="OnDialogClick"
+                          ContainerContentChanging="OnDialogContainerContentChanging" />
+            </PivotItem>
+            <PivotItem Header="unread" Margin="8,0,0,0">
+                <ListView x:Name="DialogListUnread"
+                          Style="{StaticResource DialogListStyle}"
+                          ItemsSource="{Binding DialogsUnread}"
+                          ItemClick="OnDialogClick"
+                          ContainerContentChanging="OnDialogContainerContentChanging" />
+            </PivotItem>
+            <PivotItem Header="personal" Margin="8,0,0,0">
+                <ListView x:Name="DialogListPersonal"
+                          Style="{StaticResource DialogListStyle}"
+                          ItemsSource="{Binding DialogsPersonal}"
+                          ItemClick="OnDialogClick"
+                          ContainerContentChanging="OnDialogContainerContentChanging" />
+            </PivotItem>
+            <PivotItem Header="groups" Margin="8,0,0,0">
+                <ListView x:Name="DialogListGroups"
+                          Style="{StaticResource DialogListStyle}"
+                          ItemsSource="{Binding DialogsGroups}"
+                          ItemClick="OnDialogClick"
+                          ContainerContentChanging="OnDialogContainerContentChanging" />
+            </PivotItem>
+        </Pivot>
+
+        <TextBlock Grid.Row="2"
+                   Text="{Binding ErrorMessage}"
+                   Style="{StaticResource VgCaptionStyle}"
+                   Foreground="{ThemeResource VgDangerBrush}"
+                   TextWrapping="Wrap"
+                   Margin="20,4,20,12"
+                   Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+    </Grid>
+</Page>

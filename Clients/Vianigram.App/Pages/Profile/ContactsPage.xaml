@@ -1,0 +1,99 @@
+<Page
+    x:Class="Vianigram.App.Pages.Profile.ContactsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Vianigram.App.Controls"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:ContactsPageViewModel, IsDesignTimeCreatable=True}"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <CollectionViewSource x:Name="GroupedContactsSource"
+                              IsSourceGrouped="True" />
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0"
+              Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}"
+              Height="56">
+            <TextBlock Text="Contacts"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                       VerticalAlignment="Center"
+                       Margin="20,0,0,0" />
+        </Grid>
+
+        <!-- Search -->
+        <Grid Grid.Row="1"
+              Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}">
+            <TextBox Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     PlaceholderText="Search contacts..."
+                     Margin="8,0,8,8" />
+        </Grid>
+
+        <!-- Empty state -->
+        <TextBlock Grid.Row="2"
+                   Text="No contacts found"
+                   FontSize="14"
+                   Opacity="0.7"
+                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Visibility="{Binding IsEmpty}" />
+
+        <!-- Contacts list -->
+        <ListView Grid.Row="2"
+                  x:Name="ContactsListView"
+                  ItemsSource="{Binding FilteredContacts}"
+                  SelectionMode="None"
+                  IsItemClickEnabled="True"
+                  ItemClick="OnContactItemClick">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Margin" Value="0" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Height="64" Margin="12,8,12,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="48" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <controls:AvatarCircle Grid.Column="0"
+                                               AvatarSize="44"
+                                               Initials="{Binding AvatarLetter}"
+                                               VerticalAlignment="Center" />
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding DisplayName}"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Phone}"
+                                       FontSize="13"
+                                       Opacity="0.7"
+                                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

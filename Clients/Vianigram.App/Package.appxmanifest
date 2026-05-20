@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m3="http://schemas.microsoft.com/appx/2014/manifest" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest">
+  <Identity Name="Vianigram.App" Publisher="CN=Vianigram" Version="0.1.0.0" />
+  <mp:PhoneIdentity PhoneProductId="c1d2e3f4-a5b6-4c7d-ae01-f1a2b3c4d5e6" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
+  <Properties>
+    <DisplayName>Vianigram</DisplayName>
+    <PublisherDisplayName>Vianigram</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Prerequisites>
+    <OSMinVersion>6.3.1</OSMinVersion>
+    <OSMaxVersionTested>6.3.1</OSMaxVersionTested>
+  </Prerequisites>
+  <Resources>
+    <Resource Language="en-US" />
+    <Resource Language="es-ES" />
+  </Resources>
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="Vianigram.App.App">
+      <m3:VisualElements DisplayName="Vianigram" Description="Vianigram — Telegram client for Windows Phone 8.1 by Angel Careaga." ForegroundText="light" BackgroundColor="#00A0F0" Square150x150Logo="Assets\Logo.png" Square44x44Logo="Assets\SmallLogo.png" ToastCapable="true">
+        <m3:DefaultTile Square71x71Logo="Assets\Square71x71Logo.png" Wide310x150Logo="Assets\WideLogo.png">
+          <m3:ShowNameOnTiles>
+            <m3:ShowOn Tile="square150x150Logo" />
+            <m3:ShowOn Tile="wide310x150Logo" />
+          </m3:ShowNameOnTiles>
+        </m3:DefaultTile>
+        <m3:LockScreen Notification="badge" BadgeLogo="Assets\BadgeLogo.png" />
+        <m3:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#00A0F0" />
+        <m3:InitialRotationPreference>
+          <m3:Rotation Preference="portrait" />
+        </m3:InitialRotationPreference>
+      </m3:VisualElements>
+      <Extensions>
+        <!-- Protocol activation: tg:// — opens the proxy settings page
+             when the user taps a tg://proxy?server=...&port=...&secret=...
+             URL from any other app (browser, messenger, share sheet).
+             The activation handler in App.xaml.cs parses the URI and
+             pre-fills the proxy form so the user only has to review
+             and tap Save. -->
+        <Extension Category="windows.protocol">
+          <Protocol Name="tg" />
+        </Extension>
+        <Extension Category="windows.backgroundTasks" EntryPoint="Vianigram.App.BackgroundTasks.MtprotoMaintenanceTask">
+          <BackgroundTasks>
+            <Task Type="timer" />
+          </BackgroundTasks>
+        </Extension>
+        <Extension Category="windows.backgroundTasks" EntryPoint="Vianigram.App.BackgroundTasks.VoipKeepAliveTask">
+          <BackgroundTasks>
+            <Task Type="systemEvent" />
+            <Task Type="timer" />
+            <Task Type="pushNotification" />
+          </BackgroundTasks>
+        </Extension>
+        <!-- Phase 8 (background notifications): MPNS is moribund on
+             WP 8.1 in 2026, so we replace it with two cooperating
+             background tasks that wake the device locally:
+
+             * MtprotoMaintenanceTask — TimeTrigger-driven safety net.
+               Fires every 30 min minimum (OS-enforced floor) so the
+               user is never silently behind by more than that, even
+               when every other path fails.
+
+             * VoipKeepAliveTask — system-event-driven near-realtime.
+               Vianigram has native voice/video (Vianium.VoIP, from
+               the sibling vianium-voip repo) which qualifies the app
+               for the audio task category.
+               Wakes on network-change / user-present / time-zone
+               change events to flush any accumulated backlog quickly.
+
+             Both entry points live in the separate
+             Vianigram.App.BackgroundTasks WinRT component (.winmd)
+             so the OS host process can load metadata without booting
+             the UI shell. -->
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <Capability Name="internetClientServer" />
+    <Capability Name="privateNetworkClientServer" />
+    <DeviceCapability Name="microphone" />
+    <DeviceCapability Name="webcam" />
+  </Capabilities>
+</Package>

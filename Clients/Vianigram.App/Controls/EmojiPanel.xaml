@@ -1,0 +1,74 @@
+<UserControl
+    x:Class="Vianigram.App.Controls.EmojiPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Height="260">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <GridView x:Name="EmojiGrid"
+                  Grid.Row="0"
+                  Padding="4"
+                  SelectionMode="None"
+                  IsItemClickEnabled="True">
+            <GridView.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}"
+                               FontFamily="Segoe UI Emoji"
+                               FontSize="28"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="4"
+                               Width="40"
+                               Height="40"
+                               TextAlignment="Center" />
+                </DataTemplate>
+            </GridView.ItemTemplate>
+        </GridView>
+
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled"
+                      HorizontalScrollMode="Auto"
+                      VerticalScrollMode="Disabled">
+            <StackPanel x:Name="CategoryTabs"
+                        Orientation="Horizontal"
+                        Background="{ThemeResource ListViewItemPlaceholderBackgroundThemeBrush}">
+                <Button x:Name="TabSmileys" Tag="Smileys" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x1F600;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+                <Button x:Name="TabPeople" Tag="People" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x1F44B;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+                <Button x:Name="TabAnimals" Tag="Animals" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x1F436;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+                <Button x:Name="TabFood" Tag="Food" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x1F354;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+                <Button x:Name="TabActivities" Tag="Activities" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x26BD;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+                <Button x:Name="TabTravel" Tag="Travel" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x2708;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+                <Button x:Name="TabObjects" Tag="Objects" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x1F4A1;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+                <Button x:Name="TabSymbols" Tag="Symbols" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x2764;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+                <Button x:Name="TabFlags" Tag="Flags" MinWidth="48" Background="Transparent">
+                    <TextBlock Text="&#x1F3C1;" FontFamily="Segoe UI Emoji" FontSize="18" />
+                </Button>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

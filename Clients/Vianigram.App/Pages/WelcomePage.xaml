@@ -1,0 +1,238 @@
+<Page
+    x:Class="Vianigram.App.Pages.WelcomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource VgBgBrush}">
+
+    <Page.Resources>
+        <!-- Hero pulse: scale 1 ↔ 1.04, 2.4s, autoreverse loop on the V logo. -->
+        <Storyboard x:Key="HeroPulse" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetName="DiamondCoreTransform"
+                             Storyboard.TargetProperty="ScaleX"
+                             From="1.0" To="1.04" Duration="0:0:1.2" />
+            <DoubleAnimation Storyboard.TargetName="DiamondCoreTransform"
+                             Storyboard.TargetProperty="ScaleY"
+                             From="1.0" To="1.04" Duration="0:0:1.2" />
+        </Storyboard>
+    </Page.Resources>
+
+    <!-- Outer Grid:
+            Layer 1 — ambient wash (static, never scrolls with content).
+            Layer 2 — ScrollViewer hosting the responsive layout. The inner
+                      grid is forced to be at least as tall as the visible
+                      viewport, so when everything fits we get no scroll bar
+                      and the bottom-anchored content sits at the bottom of
+                      the screen. When the canvas is shorter than the
+                      content needs (landscape, qHD-class screens), the
+                      ScrollViewer takes over and the user can pan to reach
+                      the hero. -->
+    <Grid>
+        <!-- Layer 1: ambient diagonal accent wash, static. -->
+        <Rectangle IsHitTestVisible="False">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="1,0" EndPoint="0,1">
+                    <GradientStop Color="#451BA1E2" Offset="0" />
+                    <GradientStop Color="#1A1BA1E2" Offset="0.5" />
+                    <GradientStop Color="#001BA1E2" Offset="1" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- Layer 2: scrollable responsive layout. -->
+        <ScrollViewer x:Name="ScrollHost"
+                      VerticalScrollMode="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollMode="Disabled"
+                      HorizontalScrollBarVisibility="Disabled"
+                      ZoomMode="Disabled">
+
+            <Grid x:Name="RootLayout"
+                  MinHeight="{Binding ViewportHeight, ElementName=ScrollHost}">
+
+                <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="LayoutStates">
+                        <!-- Default: portrait on a roomy screen (720p / 1080p / tablet). -->
+                        <VisualState x:Name="Wide" />
+                        <!-- Compact: short or narrow screens — pulls in the
+                             hero so the marketing copy still has room. -->
+                        <VisualState x:Name="Compact">
+                            <Storyboard>
+                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="HeroZone" Storyboard.TargetProperty="MinHeight">
+                                    <DiscreteObjectKeyFrame KeyTime="0">
+                                        <DiscreteObjectKeyFrame.Value>
+                                            <x:Double>120</x:Double>
+                                        </DiscreteObjectKeyFrame.Value>
+                                    </DiscreteObjectKeyFrame>
+                                </ObjectAnimationUsingKeyFrames>
+                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="HeroZone" Storyboard.TargetProperty="Width">
+                                    <DiscreteObjectKeyFrame KeyTime="0">
+                                        <DiscreteObjectKeyFrame.Value>
+                                            <x:Double>120</x:Double>
+                                        </DiscreteObjectKeyFrame.Value>
+                                    </DiscreteObjectKeyFrame>
+                                </ObjectAnimationUsingKeyFrames>
+                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="HeroZone" Storyboard.TargetProperty="Height">
+                                    <DiscreteObjectKeyFrame KeyTime="0">
+                                        <DiscreteObjectKeyFrame.Value>
+                                            <x:Double>120</x:Double>
+                                        </DiscreteObjectKeyFrame.Value>
+                                    </DiscreteObjectKeyFrame>
+                                </ObjectAnimationUsingKeyFrames>
+                            </Storyboard>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateManager.VisualStateGroups>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Hero zone: Vianigram V logo centered in the leftover top space. -->
+                <Grid x:Name="HeroZone"
+                      Grid.Row="0"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Width="208" Height="208"
+                      MinHeight="208"
+                      IsHitTestVisible="False">
+                    <Image x:Name="HeroLogo"
+                           Source="ms-appx:///Assets/WelcomeLogo.png"
+                           Width="166" Height="166"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <CompositeTransform x:Name="DiamondCoreTransform" ScaleX="1" ScaleY="1" />
+                        </Image.RenderTransform>
+                    </Image>
+                </Grid>
+
+                <!-- Content row: marketing copy + CTAs. Capped to 500 effective
+                     pixels and centered so wide devices (tablets, landscape)
+                     keep a comfortable measure instead of edge-to-edge stretching. -->
+                <StackPanel Grid.Row="1"
+                            MaxWidth="500"
+                            HorizontalAlignment="Stretch"
+                            Margin="24,0,24,24">
+
+                    <!-- Pill: small accent diamond + uppercase tag -->
+                    <Border Background="{ThemeResource VgSurfaceBrush}"
+                            Padding="10,4"
+                            HorizontalAlignment="Left"
+                            Margin="0,0,0,14">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Grid Width="6" Height="6" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <Rectangle Width="6" Height="6"
+                                           Fill="{ThemeResource VgAccentBrush}"
+                                           RenderTransformOrigin="0.5,0.5">
+                                    <Rectangle.RenderTransform>
+                                        <RotateTransform Angle="45" />
+                                    </Rectangle.RenderTransform>
+                                </Rectangle>
+                            </Grid>
+                            <TextBlock x:Uid="WelcomePill"
+                                       FontFamily="{StaticResource VgFont}"
+                                       FontSize="10"
+                                       FontWeight="Normal"
+                                       Foreground="{ThemeResource VgFg2Brush}"
+                                       CharacterSpacing="60"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Wordmark: vianigram + version -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <TextBlock x:Uid="WelcomeWordmark"
+                                   FontFamily="{StaticResource VgFont}"
+                                   FontSize="44"
+                                   FontWeight="Light"
+                                   Foreground="{ThemeResource VgFgBrush}"
+                                   CharacterSpacing="-20"
+                                   VerticalAlignment="Bottom" />
+                        <TextBlock x:Uid="WelcomeVersion"
+                                   FontFamily="{StaticResource VgFont}"
+                                   FontSize="13"
+                                   FontWeight="Light"
+                                   Foreground="{ThemeResource VgFg3Brush}"
+                                   VerticalAlignment="Bottom"
+                                   Margin="10,0,0,6" />
+                    </StackPanel>
+
+                    <!-- Tagline -->
+                    <TextBlock x:Uid="WelcomeTagline"
+                               FontFamily="{StaticResource VgFont}"
+                               FontSize="17"
+                               FontWeight="Light"
+                               LineHeight="22"
+                               Foreground="{ThemeResource VgFg2Brush}"
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Left" />
+
+                    <!-- Bullets row -->
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <TextBlock x:Uid="WelcomeBullet1"
+                                   FontFamily="{StaticResource VgFont}"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource VgFg3Brush}"
+                                   CharacterSpacing="100" />
+                        <TextBlock x:Uid="WelcomeBullet2"
+                                   FontFamily="{StaticResource VgFont}"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource VgFg3Brush}"
+                                   CharacterSpacing="100"
+                                   Margin="14,0,0,0" />
+                        <TextBlock x:Uid="WelcomeBullet3"
+                                   FontFamily="{StaticResource VgFont}"
+                                   FontSize="11"
+                                   Foreground="{ThemeResource VgFg3Brush}"
+                                   CharacterSpacing="100"
+                                   Margin="14,0,0,0" />
+                    </StackPanel>
+
+                    <!-- Primary CTA -->
+                    <Button x:Uid="WelcomeContinue"
+                            Style="{StaticResource VgButtonPrimaryStyle}"
+                            Command="{Binding ContinueCommand}"
+                            Margin="0,28,0,0" />
+
+                    <!-- Secondary row: scan qr | english ▾ -->
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Uid="WelcomeScanQr"
+                                Grid.Column="0"
+                                Style="{StaticResource VgButtonStyle}"
+                                BorderBrush="{ThemeResource VgFg3Brush}"
+                                Foreground="{ThemeResource VgFg2Brush}"
+                                Command="{Binding ScanQrCommand}" />
+                        <Button x:Uid="WelcomeLanguage"
+                                Grid.Column="2"
+                                Style="{StaticResource VgButtonStyle}"
+                                BorderBrush="{ThemeResource VgFg3Brush}"
+                                Foreground="{ThemeResource VgFg2Brush}"
+                                Command="{Binding LanguageCommand}" />
+                    </Grid>
+
+                    <!-- Disclaimer -->
+                    <TextBlock x:Uid="WelcomeDisclaimer"
+                               FontFamily="{StaticResource VgFont}"
+                               FontSize="10"
+                               LineHeight="14"
+                               Foreground="{ThemeResource VgFg3Brush}"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Center"
+                               Margin="0,16,0,0" />
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Page>

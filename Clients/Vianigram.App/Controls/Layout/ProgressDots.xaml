@@ -1,0 +1,137 @@
+<UserControl
+    x:Class="Vianigram.App.Controls.Layout.ProgressDots"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Height="6">
+
+    <UserControl.Resources>
+        <CubicEase x:Key="VgDotsEase" EasingMode="EaseInOut" />
+
+        <!-- Five accent dots that sweep left-to-right with staggered delays.
+             Mirrors the .vg-progress-dots animation in tokens.css. The Y is
+             handled by Grid layout (vertical center); only X and Opacity are
+             animated. Sweep range is fixed (–40 → 520) so the animation
+             reads on every WP screen size; dots that overshoot the visible
+             width simply cease to appear. -->
+        <Storyboard x:Key="DotsAnimation" RepeatBehavior="Forever">
+            <!-- Dot 1 -->
+            <DoubleAnimation Storyboard.TargetName="Dot1Translate"
+                             Storyboard.TargetProperty="X"
+                             From="-40" To="520" Duration="0:0:2.4"
+                             EasingFunction="{StaticResource VgDotsEase}" />
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot1" Storyboard.TargetProperty="Opacity">
+                <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0" />
+                <LinearDoubleKeyFrame KeyTime="0:0:0.24" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.16" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.4" Value="0" />
+            </DoubleAnimationUsingKeyFrames>
+
+            <!-- Dot 2 -->
+            <DoubleAnimation Storyboard.TargetName="Dot2Translate"
+                             Storyboard.TargetProperty="X"
+                             From="-40" To="520" Duration="0:0:2.4"
+                             BeginTime="0:0:0.2"
+                             EasingFunction="{StaticResource VgDotsEase}" />
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot2" Storyboard.TargetProperty="Opacity"
+                                            BeginTime="0:0:0.2">
+                <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0" />
+                <LinearDoubleKeyFrame KeyTime="0:0:0.24" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.16" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.4" Value="0" />
+            </DoubleAnimationUsingKeyFrames>
+
+            <!-- Dot 3 -->
+            <DoubleAnimation Storyboard.TargetName="Dot3Translate"
+                             Storyboard.TargetProperty="X"
+                             From="-40" To="520" Duration="0:0:2.4"
+                             BeginTime="0:0:0.4"
+                             EasingFunction="{StaticResource VgDotsEase}" />
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot3" Storyboard.TargetProperty="Opacity"
+                                            BeginTime="0:0:0.4">
+                <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0" />
+                <LinearDoubleKeyFrame KeyTime="0:0:0.24" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.16" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.4" Value="0" />
+            </DoubleAnimationUsingKeyFrames>
+
+            <!-- Dot 4 -->
+            <DoubleAnimation Storyboard.TargetName="Dot4Translate"
+                             Storyboard.TargetProperty="X"
+                             From="-40" To="520" Duration="0:0:2.4"
+                             BeginTime="0:0:0.6"
+                             EasingFunction="{StaticResource VgDotsEase}" />
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot4" Storyboard.TargetProperty="Opacity"
+                                            BeginTime="0:0:0.6">
+                <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0" />
+                <LinearDoubleKeyFrame KeyTime="0:0:0.24" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.16" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.4" Value="0" />
+            </DoubleAnimationUsingKeyFrames>
+
+            <!-- Dot 5 -->
+            <DoubleAnimation Storyboard.TargetName="Dot5Translate"
+                             Storyboard.TargetProperty="X"
+                             From="-40" To="520" Duration="0:0:2.4"
+                             BeginTime="0:0:0.8"
+                             EasingFunction="{StaticResource VgDotsEase}" />
+            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Dot5" Storyboard.TargetProperty="Opacity"
+                                            BeginTime="0:0:0.8">
+                <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0" />
+                <LinearDoubleKeyFrame KeyTime="0:0:0.24" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.16" Value="1" />
+                <LinearDoubleKeyFrame KeyTime="0:0:2.4" Value="0" />
+            </DoubleAnimationUsingKeyFrames>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Grid>
+        <Ellipse x:Name="Dot1" Width="4" Height="4"
+                 Fill="{ThemeResource VgAccentBrush}"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center"
+                 Opacity="0">
+            <Ellipse.RenderTransform>
+                <TranslateTransform x:Name="Dot1Translate" X="-40" />
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse x:Name="Dot2" Width="4" Height="4"
+                 Fill="{ThemeResource VgAccentBrush}"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center"
+                 Opacity="0">
+            <Ellipse.RenderTransform>
+                <TranslateTransform x:Name="Dot2Translate" X="-40" />
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse x:Name="Dot3" Width="4" Height="4"
+                 Fill="{ThemeResource VgAccentBrush}"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center"
+                 Opacity="0">
+            <Ellipse.RenderTransform>
+                <TranslateTransform x:Name="Dot3Translate" X="-40" />
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse x:Name="Dot4" Width="4" Height="4"
+                 Fill="{ThemeResource VgAccentBrush}"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center"
+                 Opacity="0">
+            <Ellipse.RenderTransform>
+                <TranslateTransform x:Name="Dot4Translate" X="-40" />
+            </Ellipse.RenderTransform>
+        </Ellipse>
+        <Ellipse x:Name="Dot5" Width="4" Height="4"
+                 Fill="{ThemeResource VgAccentBrush}"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center"
+                 Opacity="0">
+            <Ellipse.RenderTransform>
+                <TranslateTransform x:Name="Dot5Translate" X="-40" />
+            </Ellipse.RenderTransform>
+        </Ellipse>
+    </Grid>
+</UserControl>

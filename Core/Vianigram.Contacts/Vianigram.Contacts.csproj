@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{B6C7D8E9-FAAB-4CCD-DF02-F6A7B8C9DAEB}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vianigram.Contacts</RootNamespace>
+    <AssemblyName>Vianigram.Contacts</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>12</MinimumVisualStudioVersion>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Domain\ValueObjects\Unit.cs" />
+    <Compile Include="Domain\ValueObjects\UserId.cs" />
+    <Compile Include="Domain\ValueObjects\PhoneNumber.cs" />
+    <Compile Include="Domain\ValueObjects\ContactImportRequest.cs" />
+    <Compile Include="Domain\ValueObjects\ContactImportResult.cs" />
+    <Compile Include="Domain\Entities\Contact.cs" />
+    <Compile Include="Domain\Entities\ContactBook.cs" />
+    <Compile Include="Domain\Events\ContactsEvents.cs" />
+    <Compile Include="Domain\ContactsError.cs" />
+    <Compile Include="Application\UseCases\SyncContactsCommand.cs" />
+    <Compile Include="Application\UseCases\GetContactsCommand.cs" />
+    <Compile Include="Application\UseCases\ImportContactsCommand.cs" />
+    <Compile Include="Application\UseCases\SearchContactsCommand.cs" />
+    <Compile Include="Application\UseCases\BlockUserCommand.cs" />
+    <Compile Include="Application\UseCases\UnblockUserCommand.cs" />
+    <Compile Include="Application\UseCases\GetBlockedListCommand.cs" />
+    <Compile Include="Application\Handlers\HandlerEventBridge.cs" />
+    <Compile Include="Application\Handlers\SyncContactsHandler.cs" />
+    <Compile Include="Application\Handlers\GetContactsHandler.cs" />
+    <Compile Include="Application\Handlers\ImportContactsHandler.cs" />
+    <Compile Include="Application\Handlers\SearchContactsHandler.cs" />
+    <Compile Include="Application\Handlers\BlockUserHandler.cs" />
+    <Compile Include="Application\Handlers\UnblockUserHandler.cs" />
+    <Compile Include="Application\Handlers\GetBlockedListHandler.cs" />
+    <Compile Include="Application\RpcErrorMapper.cs" />
+    <Compile Include="Application\ContactsApplication.cs" />
+    <Compile Include="Ports\Inbound\IContactsApi.cs" />
+    <Compile Include="Ports\Inbound\ContactsChangedEventArgs.cs" />
+    <Compile Include="Ports\Outbound\IContactRepository.cs" />
+    <Compile Include="Ports\Outbound\IMtProtoRpcPort.cs" />
+    <Compile Include="Ports\Outbound\MtProtoRpcError.cs" />
+    <Compile Include="Infrastructure\TlEncoder.cs" />
+    <Compile Include="Infrastructure\TlDecoder.cs" />
+    <Compile Include="Infrastructure\InMemoryContactRepository.cs" />
+    <Compile Include="Composition\ContactsCompositionRoot.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
+    <VisualStudioVersion>12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

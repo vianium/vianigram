@@ -1,0 +1,121 @@
+<Page
+    x:Class="Vianigram.App.Pages.PhoneNumberPage"
+    x:Name="RootPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:layout="using:Vianigram.App.Controls.Layout"
+    xmlns:conv="using:Vianigram.App.Converters"
+    mc:Ignorable="d"
+    Background="{ThemeResource VgBgBrush}">
+
+    <Page.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+    </Page.Resources>
+
+    <Page.BottomAppBar>
+        <CommandBar DataContext="{Binding DataContext, ElementName=RootPage}">
+            <AppBarButton x:Uid="CommonNextAppBar"
+                          Label="next"
+                          Icon="Forward"
+                          Command="{Binding NextCommand}" />
+        </CommandBar>
+    </Page.BottomAppBar>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header: VIANIGRAM strap + "your number" page title -->
+        <layout:AppHeader x:Name="HeaderControl" Grid.Row="0" />
+
+        <!-- Body -->
+        <Grid Grid.Row="1">
+            <StackPanel Margin="24,20,24,0">
+                <TextBlock x:Uid="PhoneNumberDescription"
+                           Style="{StaticResource VgBodyStyle}"
+                           Foreground="{ThemeResource VgFg2Brush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,24" />
+
+                <!-- Country row -->
+                <Button x:Name="CountryButton"
+                        Style="{StaticResource VgRowButtonStyle}"
+                        Command="{Binding SelectCountryCommand}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock x:Uid="PhoneNumberCountryLabel"
+                                       FontFamily="{StaticResource VgFont}"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource VgFg3Brush}"
+                                       CharacterSpacing="100" />
+                            <TextBlock Text="{Binding CountryName}"
+                                       FontFamily="{StaticResource VgFont}"
+                                       FontSize="15"
+                                       Foreground="{ThemeResource VgFgBrush}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <Viewbox Grid.Column="1"
+                                 Width="14" Height="14"
+                                 VerticalAlignment="Center">
+                            <Path Data="{StaticResource VgGlyphChevron}"
+                                  Stroke="{ThemeResource VgFg3Brush}"
+                                  StrokeThickness="1.5"
+                                  StrokeLineJoin="Round"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Width="24" Height="24"
+                                  Stretch="None" />
+                        </Viewbox>
+                    </Grid>
+                </Button>
+
+                <!-- Phone input row: dial code + national number -->
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding CountryCode}"
+                               FontFamily="{StaticResource VgFont}"
+                               FontSize="22"
+                               FontWeight="Light"
+                               Foreground="{ThemeResource VgFgBrush}"
+                               MinWidth="60"
+                               VerticalAlignment="Center" />
+                    <TextBox x:Name="PhoneInput"
+                             Grid.Column="1"
+                             Style="{StaticResource VgFieldUnderlineStyle}"
+                             Text="{Binding NationalNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             PlaceholderText="{Binding PhonePlaceholder}"
+                             InputScope="TelephoneNumber"
+                             TextChanged="PhoneInput_TextChanged"
+                             Margin="12,0,0,0" />
+                </Grid>
+
+                <!-- Indeterminate sweep — visible while send_code is in flight.
+                     Cold MTProto handshakes can take 30–90s on a fresh
+                     auth_key, so a sweeping loader matters here. -->
+                <layout:ProgressDots IsActive="{Binding IsBusy}"
+                                     Margin="0,28,0,0" />
+
+                <!-- Error -->
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Style="{StaticResource VgCaptionStyle}"
+                           Foreground="{ThemeResource VgDangerBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,16,0,0"
+                           Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</Page>

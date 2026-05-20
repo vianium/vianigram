@@ -1,0 +1,151 @@
+<Page
+    x:Class="Vianigram.App.Pages.Compose.PollPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:Vianigram.App.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:PollPageViewModel, IsDesignTimeCreatable=True}"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0">
+            <StackPanel Margin="20,16,20,16">
+                <TextBlock Text="Create poll"
+                           FontSize="28"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,12" />
+
+                <TextBlock Text="Question"
+                           FontSize="14"
+                           Opacity="0.7"
+                           Margin="0,0,0,4" />
+                <TextBox Text="{Binding Question, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="Ask a question"
+                         TextWrapping="Wrap"
+                         MaxLength="255"
+                         MinHeight="60"
+                         Margin="0,0,0,16" />
+
+                <TextBlock Text="Options"
+                           FontSize="14"
+                           Opacity="0.7"
+                           Margin="0,0,0,4" />
+
+                <ItemsControl ItemsSource="{Binding Options}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         PlaceholderText="{Binding PlaceholderText}"
+                                         MaxLength="100" />
+                                <Button Grid.Column="1"
+                                        Content="X"
+                                        Margin="6,0,0,0"
+                                        Click="OnRemoveOptionClicked" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Content="Add an option"
+                        Command="{Binding AddOptionCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Left"
+                        Background="Transparent"
+                        Margin="0,4,0,16" />
+
+                <Grid Margin="0,4,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="Anonymous voting"
+                               FontSize="15"
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                    <ToggleSwitch Grid.Column="1"
+                                  IsOn="{Binding IsAnonymous, Mode=TwoWay}"
+                                  VerticalAlignment="Center" />
+                </Grid>
+
+                <Grid Margin="0,4,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="Multiple answers"
+                               FontSize="15"
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                    <ToggleSwitch Grid.Column="1"
+                                  IsOn="{Binding MultipleAnswers, Mode=TwoWay}"
+                                  VerticalAlignment="Center" />
+                </Grid>
+
+                <Grid Margin="0,4,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="Quiz mode"
+                               FontSize="15"
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                    <ToggleSwitch Grid.Column="1"
+                                  IsOn="{Binding IsQuiz, Mode=TwoWay}"
+                                  VerticalAlignment="Center" />
+                </Grid>
+
+                <StackPanel Visibility="{Binding IsQuiz, Converter={StaticResource BoolToVisibility}}"
+                            Margin="0,4,0,8">
+                    <TextBlock Text="Correct option"
+                               FontSize="14"
+                               Opacity="0.7"
+                               Margin="0,0,0,4" />
+                    <ComboBox x:Name="CorrectOptionBox"
+                              ItemsSource="{Binding Options}"
+                              SelectedIndex="{Binding CorrectIndex, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Text}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="Red"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0"
+                           Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button Grid.Row="1"
+                Content="Create poll"
+                Command="{Binding CreateCommand}"
+                HorizontalAlignment="Stretch"
+                Margin="20,8,20,16" />
+    </Grid>
+</Page>

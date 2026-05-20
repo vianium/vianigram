@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{9A1B2C3D-0002-4002-8000-000000000002}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vianigram.Composition</RootNamespace>
+    <AssemblyName>Vianigram.Composition</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>12</MinimumVisualStudioVersion>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Configuration\TelegramAppConfig.cs" />
+    <!--
+      TelegramAppConfig.Local.cs holds real api_id / api_hash credentials.
+      It is gitignored (see /.gitignore: **/TelegramAppConfig.Local.cs).
+      The Condition="Exists(...)" guard lets the build succeed in fresh
+      clones where the file is absent (placeholder credentials are used
+      at runtime; the Telegram auth_key handshake fails — expected in a
+      public fork). See TelegramAppConfig.Local.cs.example for the
+      pattern.
+    -->
+    <Compile Include="Configuration\TelegramAppConfig.Local.cs" Condition="Exists('Configuration\TelegramAppConfig.Local.cs')" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Roots\VianigramCompositionRoot.cs" />
+    <Compile Include="Infrastructure\StubMtProtoRpcPort.cs" />
+    <Compile Include="Infrastructure\NativeSrpClientPort.cs" />
+    <Compile Include="Infrastructure\DeferredMtProtoChannel.cs" />
+    <Compile Include="Infrastructure\DeferredMtProtoUpdatesPort.cs" />
+    <Compile Include="Infrastructure\AccountLoginMtProtoRpcPort.cs" />
+    <Compile Include="Infrastructure\MtProtoChannelAdapter.cs" />
+    <Compile Include="Infrastructure\MtProtoChannelAdapter.AdditionalContexts.cs" />
+    <Compile Include="Infrastructure\MtProtoChannelAdapter.TypedStubs.cs" />
+    <Compile Include="Infrastructure\TlByteBuilder.cs" />
+    <Compile Include="Infrastructure\TlByteReader.cs" />
+    <Compile Include="Infrastructure\StubMtProtoRpcPort.AdditionalContexts.cs" />
+    <Compile Include="Infrastructure\MtProtoUpdatesAdapter.cs" />
+    <Compile Include="Infrastructure\MtProtoChannelUpdatesPort.cs" />
+    <Compile Include="Infrastructure\MessagesUpdatesProcessor.cs" />
+    <Compile Include="Infrastructure\CallsUpdatesProcessor.cs" />
+    <Compile Include="Infrastructure\CallsUpdatePoller.cs" />
+    <Compile Include="Infrastructure\IPeerCache.cs" />
+    <Compile Include="Infrastructure\InMemoryPeerCache.cs" />
+    <Compile Include="Infrastructure\AuthKeyGeneratorAdapter.cs" />
+    <Compile Include="Infrastructure\BridgeAuthKeyStore.cs" />
+    <Compile Include="Infrastructure\LocalSettingsPreferredDcStore.cs" />
+    <Compile Include="Infrastructure\LocalSettingsPreferencesStore.cs" />
+    <Compile Include="Infrastructure\MtProxyRuntimeSink.cs" />
+    <Compile Include="Infrastructure\MtProxyProbe.cs" />
+    <Compile Include="Infrastructure\ProxyBootstrap.cs" />
+    <Compile Include="Infrastructure\GzipResponseDecoder.cs" />
+    <Compile Include="Infrastructure\PeerAccessHashAdapter.cs" />
+    <Compile Include="Infrastructure\CallsUserAccessHashAdapter.cs" />
+    <Compile Include="Infrastructure\TelegramDhConfigCodec.cs" />
+    <Compile Include="Infrastructure\VianiumVoipCallsAdapter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+    <Reference Include="System.Runtime.WindowsRuntime" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Account\Vianigram.Account.csproj">
+      <Project>{B1C2D3E4-F5A6-4B7C-8D90-E1F2A3B4C5D6}</Project>
+      <Name>Vianigram.Account</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Chats\Vianigram.Chats.csproj">
+      <Project>{B2C3D4E5-F6A7-4B8C-9D01-E2F3A4B5C6D7}</Project>
+      <Name>Vianigram.Chats</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Messages\Vianigram.Messages.csproj">
+      <Project>{B3C4D5E6-F7A8-4B9C-AD01-E3F4A5B6C7D8}</Project>
+      <Name>Vianigram.Messages</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Sync\Vianigram.Sync.csproj">
+      <Project>{B4C5D6E7-F8A9-4BAC-BE01-E4F5A6B7C8D9}</Project>
+      <Name>Vianigram.Sync</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Storage\Vianigram.Storage.csproj">
+      <Project>{B5C6D7E8-F9AA-4BBD-CF01-E5F6A7B8C9DA}</Project>
+      <Name>Vianigram.Storage</Name>
+    </ProjectReference>
+    <!-- Nine bounded contexts wired into composition. -->
+    <ProjectReference Include="..\Vianigram.Contacts\Vianigram.Contacts.csproj">
+      <Project>{B6C7D8E9-FAAB-4CCD-DF02-F6A7B8C9DAEB}</Project>
+      <Name>Vianigram.Contacts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Notifications\Vianigram.Notifications.csproj">
+      <Project>{C0DBE2FE-3EE0-4F0C-C107-EBFCADBECFD0}</Project>
+      <Name>Vianigram.Notifications</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Settings\Vianigram.Settings.csproj">
+      <Project>{C1DCF300-4FF1-4F1D-D208-FCADBECFD0E1}</Project>
+      <Name>Vianigram.Settings</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Privacy\Vianigram.Privacy.csproj">
+      <Project>{C3FE0522-61F3-4F3F-F40A-DBECFD0E1F20}</Project>
+      <Name>Vianigram.Privacy</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Search\Vianigram.Search.csproj">
+      <Project>{C2EDF411-50F2-4F2E-E309-CADBECFD0E1F}</Project>
+      <Name>Vianigram.Search</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Media\Vianigram.Media.csproj">
+      <Project>{B7C8D9EA-FBAC-4DDE-EF03-A7B8C9DAEBFC}</Project>
+      <Name>Vianigram.Media</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Stickers\Vianigram.Stickers.csproj">
+      <Project>{B8C9D0EB-0BBD-4EEF-F004-B8C9DAEBFCAD}</Project>
+      <Name>Vianigram.Stickers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.SecretChats\Vianigram.SecretChats.csproj">
+      <Project>{B9CAD1EC-1CCE-4FFA-A005-C9DAEBFCADBE}</Project>
+      <Name>Vianigram.SecretChats</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Vianigram.Calls\Vianigram.Calls.csproj">
+      <Project>{BACBE2ED-2DDF-4FFB-B106-DAEBFCADBECF}</Project>
+      <Name>Vianigram.Calls</Name>
+    </ProjectReference>
+    <!--
+      Native WinRT components (.winmd projection). Composition wires the real
+      MtProtoConnection (DH handshake) and MtProtoChannel (encrypted RPC) into
+      the per-context outbound ports. The crypto / TL / MTProto / VoIP libs
+      now live in their own Vianium sibling repos and are referenced by
+      relative path. Fixes in those libs flow automatically.
+    -->
+    <!-- Vianium.Core.Crypto is a StaticLibrary (no .winmd projection). It
+         gets statically linked into Vianium.Tls.dll / Vianium.MTProto.dll /
+         Vianium.MtProxy.dll, which managed code references directly.
+         The SRP-2048 (Telegram 2FA) client surface is exposed through a
+         separate WinRT projection (vianium-crypto/winrt) so managed code
+         can see Vianium.Crypto.SrpClient. -->
+    <ProjectReference Include="..\..\..\vianium-crypto\winrt\Vianium.Core.Crypto.WinRT.vcxproj">
+      <Project>{B1C2D3E4-F5A6-47B8-9C0D-1E2F3A4B5C6D}</Project>
+      <Name>Vianium.Core.Crypto.WinRT</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\vianium-mtproto\Vianium.Tl.vcxproj">
+      <Project>{D2E3F4A5-B6C7-4D8E-9F01-A2B3C4D5E6F7}</Project>
+      <Name>Vianium.Tl</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\vianium-mtproto\Vianium.MTProto.vcxproj">
+      <Project>{D3E4F5A6-B7C8-4D9E-9F01-A3B4C5D6E7F8}</Project>
+      <Name>Vianium.MTProto</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+    <!-- Vianium.MtProxy WinRT projection — consumed by MtProxyProbe to
+         run the live handshake test from the proxy settings page. The
+         transitive runtime dependency (Vianium.MtProxy.dll) was already
+         pulled in via Vianium.MTProto.vcxproj's ProjectReference; this
+         entry exposes the .winmd to managed code for compile-time
+         resolution of the projected types. -->
+    <ProjectReference Include="..\..\..\vianium-mtproxy\Vianium.MtProxy.vcxproj">
+      <Project>{C8D9E0F1-A2B3-4C4D-5E6F-7A8B9C0D1E2F}</Project>
+      <Name>Vianium.MtProxy</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\vianium-voip\VianiumVoIP.vcxproj">
+      <Project>{E5F6A7B8-C9DA-4DBE-9F24-D6E7F8A9BBC1}</Project>
+      <Name>VianiumVoIP</Name>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <Private>true</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
+    <VisualStudioVersion>12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

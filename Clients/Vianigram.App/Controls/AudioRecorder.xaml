@@ -1,0 +1,67 @@
+<UserControl
+    x:Class="Vianigram.App.Controls.AudioRecorder"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <Storyboard x:Name="PulseStoryboard" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="RecordingIndicator"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0.3" To="1.0" Duration="0:0:0.6"
+                             AutoReverse="True" />
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel x:Name="RecordingPanel"
+                    Grid.Column="0"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed">
+            <Ellipse x:Name="RecordingIndicator"
+                     Width="10"
+                     Height="10"
+                     Fill="Red"
+                     Margin="8,0,8,0"
+                     VerticalAlignment="Center" />
+            <TextBlock x:Name="TimerText"
+                       Text="0:00"
+                       FontSize="16"
+                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                       VerticalAlignment="Center"
+                       Margin="4,0,0,0" />
+            <StackPanel x:Name="LiveWaveformPanel"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Margin="12,0,0,0"
+                        Height="20" />
+            <TextBlock Text="&lt; Slide to cancel"
+                       FontSize="13"
+                       Opacity="0.6"
+                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                       VerticalAlignment="Center"
+                       Margin="16,0,0,0" />
+        </StackPanel>
+
+        <Border x:Name="MicButton"
+                Grid.Column="1"
+                Width="44"
+                Height="44"
+                Background="Transparent">
+            <TextBlock Text="&#xE1D6;"
+                       FontFamily="Segoe UI Symbol"
+                       FontSize="24"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="{ThemeResource SystemControlHighlightAccentBrush}" />
+        </Border>
+    </Grid>
+</UserControl>

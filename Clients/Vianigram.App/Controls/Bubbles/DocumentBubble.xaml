@@ -1,0 +1,111 @@
+<UserControl
+    x:Class="Vianigram.App.Controls.Bubbles.DocumentBubble"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid" MaxWidth="304" Margin="8,2,8,2">
+        <Border x:Name="BubbleBorder"
+                CornerRadius="14"
+                Padding="10"
+                BorderThickness="1"
+                Background="{ThemeResource ListViewItemPlaceholderBackgroundThemeBrush}"
+                BorderBrush="{ThemeResource ListViewItemSelectedBackgroundThemeBrush}">
+            <StackPanel>
+                <Grid x:Name="DocumentGrid"
+                      Tapped="OnDocumentTapped">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="0"
+                          Width="44"
+                          Height="44"
+                          Margin="0,0,10,0"
+                          VerticalAlignment="Center">
+                        <Ellipse x:Name="IconCircle"
+                                 Width="44"
+                                 Height="44"
+                                 Fill="{ThemeResource SystemControlHighlightAccentBrush}" />
+                        <TextBlock x:Name="FileGlyph"
+                                   Text="&#xE160;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="20"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="DownloadGlyph"
+                                   Text="&#xE896;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="18"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Visibility="Collapsed" />
+                        <TextBlock x:Name="CancelGlyph"
+                                   Text="&#xE711;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="18"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Visibility="Collapsed" />
+                        <ProgressRing x:Name="DownloadRing"
+                                      IsActive="False"
+                                      Width="30"
+                                      Height="30"
+                                      Foreground="White"
+                                      Visibility="Collapsed" />
+                    </Grid>
+
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center">
+                        <TextBlock x:Name="FileNameText"
+                                   FontSize="15"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="1" />
+                        <TextBlock x:Name="FileSizeText"
+                                   FontSize="12"
+                                   Margin="0,2,0,0"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                                   Opacity="0.7" />
+                        <ProgressBar x:Name="DownloadProgressBar"
+                                     Height="3"
+                                     Minimum="0"
+                                     Maximum="100"
+                                     Value="0"
+                                     Margin="0,7,0,0"
+                                     Visibility="Collapsed"
+                                     Foreground="{ThemeResource SystemControlHighlightAccentBrush}" />
+                    </StackPanel>
+
+                    <Button x:Name="ActionButton"
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="6"
+                            Click="OnActionButtonClick">
+                        <TextBlock x:Name="ActionGlyph"
+                                   Text="&#xE896;"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   FontSize="18"
+                                   Foreground="{ThemeResource SystemControlHighlightAccentBrush}" />
+                    </Button>
+                </Grid>
+
+                <TextBlock x:Name="CaptionText"
+                           TextWrapping="Wrap"
+                           FontSize="14"
+                           Margin="0,8,0,0"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                           Visibility="Collapsed" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

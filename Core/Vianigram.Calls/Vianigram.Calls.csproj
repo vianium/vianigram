@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{BACBE2ED-2DDF-4FFB-B106-DAEBFCADBECF}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vianigram.Calls</RootNamespace>
+    <AssemblyName>Vianigram.Calls</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>12</MinimumVisualStudioVersion>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Domain\ValueObjects\Unit.cs" />
+    <Compile Include="Domain\ValueObjects\CallId.cs" />
+    <Compile Include="Domain\ValueObjects\CallParticipant.cs" />
+    <Compile Include="Domain\ValueObjects\CallProtocol.cs" />
+    <Compile Include="Domain\ValueObjects\CallEndpoint.cs" />
+    <Compile Include="Domain\ValueObjects\KeyFingerprint.cs" />
+    <Compile Include="Domain\ValueObjects\CallDuration.cs" />
+    <Compile Include="Domain\ValueObjects\DiscardReason.cs" />
+    <Compile Include="Domain\ValueObjects\CallSessionState.cs" />
+    <Compile Include="Domain\ValueObjects\CallStats.cs" />
+    <Compile Include="Domain\Entities\CallSession.cs" />
+    <Compile Include="Domain\Events\CallEvents.cs" />
+    <Compile Include="Domain\CallError.cs" />
+    <Compile Include="Application\UseCases\RequestCallCommand.cs" />
+    <Compile Include="Application\UseCases\AcceptCallCommand.cs" />
+    <Compile Include="Application\UseCases\DiscardCallCommand.cs" />
+    <Compile Include="Application\UseCases\UpdateCallStateCommand.cs" />
+    <Compile Include="Application\UseCases\SetMutedCommand.cs" />
+    <Compile Include="Application\UseCases\SetSpeakerCommand.cs" />
+    <Compile Include="Application\UseCases\FlipCameraCommand.cs" />
+    <Compile Include="Application\Handlers\HandlerEventBridge.cs" />
+    <Compile Include="Application\Handlers\RequestCallHandler.cs" />
+    <Compile Include="Application\Handlers\AcceptCallHandler.cs" />
+    <Compile Include="Application\Handlers\DiscardCallHandler.cs" />
+    <Compile Include="Application\Handlers\UpdateCallStateHandler.cs" />
+    <Compile Include="Application\Handlers\SetMutedHandler.cs" />
+    <Compile Include="Application\Handlers\SetSpeakerHandler.cs" />
+    <Compile Include="Application\Handlers\FlipCameraHandler.cs" />
+    <Compile Include="Application\RpcErrorMapper.cs" />
+    <Compile Include="Application\CallsApplication.cs" />
+    <Compile Include="Ports\Inbound\ICallsApi.cs" />
+    <Compile Include="Ports\Inbound\CallStateChangedEventArgs.cs" />
+    <Compile Include="Ports\Inbound\CallReceivedEventArgs.cs" />
+    <Compile Include="Ports\Outbound\IMtProtoRpcPort.cs" />
+    <Compile Include="Ports\Outbound\MtProtoRpcError.cs" />
+    <Compile Include="Ports\Outbound\ICallSignalingRpcPort.cs" />
+    <Compile Include="Ports\Outbound\IVoipMediaPort.cs" />
+    <Compile Include="Ports\Outbound\ICallCryptoVault.cs" />
+    <Compile Include="Ports\Outbound\IUserAccessHashPort.cs" />
+    <Compile Include="Ports\Outbound\ICallRepository.cs" />
+    <Compile Include="Infrastructure\InMemoryCallRepository.cs" />
+    <Compile Include="Infrastructure\StubVoipMediaPort.cs" />
+    <Compile Include="Infrastructure\StubCallCryptoVault.cs" />
+    <Compile Include="Infrastructure\CallSignalingRpcPort.cs" />
+    <Compile Include="Infrastructure\TlEncoder.cs" />
+    <Compile Include="Infrastructure\TlDecoder.cs" />
+    <Compile Include="Composition\CallsCompositionRoot.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
+    <VisualStudioVersion>12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

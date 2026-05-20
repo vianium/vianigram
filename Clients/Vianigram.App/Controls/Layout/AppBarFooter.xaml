@@ -1,0 +1,101 @@
+<UserControl
+    x:Class="Vianigram.App.Controls.Layout.AppBarFooter"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Height="{StaticResource VgAppBarHeight}">
+
+    <UserControl.Resources>
+        <!-- Local button style: stacked glyph-circle + 10px lowercase label.
+             No chrome, no border ring on the button itself; the inner Border
+             draws the circle. Pressed state dims the whole button. -->
+        <Style x:Key="VgAppBarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{ThemeResource VgFgBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="Root" Background="Transparent">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver" />
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0.6" Duration="0:0:0.08" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" To="0.4" Duration="0" />
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{ThemeResource VgSurfaceBrush}">
+        <Border BorderBrush="{ThemeResource VgDividerBrush}" BorderThickness="0,1,0,0" />
+        <Grid Margin="8,0,8,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="NextButton"
+                    Grid.Column="0"
+                    Style="{StaticResource VgAppBarButtonStyle}">
+                <StackPanel HorizontalAlignment="Center">
+                    <Border Width="28"
+                            Height="28"
+                            CornerRadius="14"
+                            BorderBrush="{ThemeResource VgFgBrush}"
+                            BorderThickness="1.5"
+                            HorizontalAlignment="Center">
+                        <Viewbox Width="14" Height="14">
+                            <Path Data="{StaticResource VgGlyphForward}"
+                                  Stroke="{ThemeResource VgFgBrush}"
+                                  StrokeThickness="1.5"
+                                  StrokeLineJoin="Round"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  Width="24" Height="24"
+                                  Stretch="None" />
+                        </Viewbox>
+                    </Border>
+                    <TextBlock x:Name="NextLabelText"
+                               FontSize="10"
+                               FontFamily="{StaticResource VgFont}"
+                               Foreground="{ThemeResource VgFgBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,4,0,0" />
+                </StackPanel>
+            </Button>
+
+            <TextBlock Grid.Column="1"
+                       Text="• • •"
+                       FontSize="18"
+                       FontFamily="{StaticResource VgFont}"
+                       Foreground="{ThemeResource VgFgBrush}"
+                       VerticalAlignment="Center"
+                       Margin="8,0,8,0"
+                       Opacity="0.6" />
+        </Grid>
+    </Grid>
+</UserControl>

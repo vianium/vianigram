@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{C1DCF300-4FF1-4F1D-D208-FCADBECFD0E1}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vianigram.Settings</RootNamespace>
+    <AssemblyName>Vianigram.Settings</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>12</MinimumVisualStudioVersion>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Domain\ValueObjects\Unit.cs" />
+    <Compile Include="Domain\ValueObjects\PreferenceKey.cs" />
+    <Compile Include="Domain\ValueObjects\Theme.cs" />
+    <Compile Include="Domain\ValueObjects\LanguagePack.cs" />
+    <Compile Include="Domain\ValueObjects\ProxySecretMode.cs" />
+    <Compile Include="Domain\ValueObjects\ProxyConfig.cs" />
+    <Compile Include="Domain\ValueObjects\ProxyProbeResult.cs" />
+    <Compile Include="Domain\ValueObjects\NetworkKind.cs" />
+    <Compile Include="Domain\ValueObjects\DataUsagePolicy.cs" />
+    <Compile Include="Domain\ValueObjects\EmojiSize.cs" />
+    <Compile Include="Domain\ValueObjects\MessageTextSize.cs" />
+    <Compile Include="Domain\ValueObjects\ChatBackground.cs" />
+    <Compile Include="Domain\Entities\UserPreferences.cs" />
+    <Compile Include="Domain\Events\SettingsEvents.cs" />
+    <Compile Include="Domain\SettingsError.cs" />
+    <Compile Include="Application\UseCases\GetPreferenceCommand.cs" />
+    <Compile Include="Application\UseCases\SetPreferenceCommand.cs" />
+    <Compile Include="Application\UseCases\ResetToDefaultsCommand.cs" />
+    <Compile Include="Application\UseCases\ApplyThemeCommand.cs" />
+    <Compile Include="Application\UseCases\ChangeLanguageCommand.cs" />
+    <Compile Include="Application\UseCases\UpdateDataUsageCommand.cs" />
+    <Compile Include="Application\UseCases\SyncFromServerCommand.cs" />
+    <Compile Include="Application\Handlers\HandlerEventBridge.cs" />
+    <Compile Include="Application\Handlers\GetPreferenceHandler.cs" />
+    <Compile Include="Application\Handlers\SetPreferenceHandler.cs" />
+    <Compile Include="Application\Handlers\ResetToDefaultsHandler.cs" />
+    <Compile Include="Application\Handlers\ApplyThemeHandler.cs" />
+    <Compile Include="Application\Handlers\ChangeLanguageHandler.cs" />
+    <Compile Include="Application\Handlers\UpdateDataUsageHandler.cs" />
+    <Compile Include="Application\Handlers\SyncFromServerHandler.cs" />
+    <Compile Include="Application\PreferenceDefaults.cs" />
+    <Compile Include="Application\RpcErrorMapper.cs" />
+    <Compile Include="Application\SettingsApplication.cs" />
+    <Compile Include="Ports\Inbound\ISettingsApi.cs" />
+    <Compile Include="Ports\Inbound\PreferenceChangedEventArgs.cs" />
+    <Compile Include="Ports\Outbound\IMtProtoRpcPort.cs" />
+    <Compile Include="Ports\Outbound\MtProtoRpcError.cs" />
+    <Compile Include="Ports\Outbound\IPreferencesStore.cs" />
+    <Compile Include="Ports\Outbound\IProxyRuntimeSink.cs" />
+    <Compile Include="Ports\Outbound\IProxyProbe.cs" />
+    <Compile Include="Infrastructure\PreferenceKeys.cs" />
+    <Compile Include="Infrastructure\PreferenceSerializer.cs" />
+    <Compile Include="Infrastructure\InMemoryPreferencesStore.cs" />
+    <Compile Include="Infrastructure\StubLocalSettingsStore.cs" />
+    <Compile Include="Infrastructure\ProxyConfigParser.cs" />
+    <Compile Include="Infrastructure\NoOpProxyRuntimeSink.cs" />
+    <Compile Include="Infrastructure\NoOpProxyProbe.cs" />
+    <Compile Include="Infrastructure\TlEncoder.cs" />
+    <Compile Include="Infrastructure\TlDecoder.cs" />
+    <Compile Include="Composition\SettingsCompositionRoot.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
+    <VisualStudioVersion>12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

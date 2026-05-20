@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{B5C6D7E8-F9AA-4BBD-CF01-E5F6A7B8C9DA}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vianigram.Storage</RootNamespace>
+    <AssemblyName>Vianigram.Storage</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>12</MinimumVisualStudioVersion>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Application\IDataProtector.cs" />
+    <Compile Include="Application\IObjectStore.cs" />
+    <Compile Include="Infrastructure\PlatformDataProtector.cs" />
+    <Compile Include="Infrastructure\JsonObjectStore.cs" />
+    <Compile Include="Infrastructure\Sqlite\Sqlite3Native.cs" />
+    <Compile Include="Infrastructure\Sqlite\SqliteDatabase.cs" />
+    <Compile Include="Infrastructure\Sqlite\SqliteAuthKeyStore.cs" />
+    <Compile Include="Infrastructure\Sqlite\SqliteObjectStore.cs" />
+    <Compile Include="Infrastructure\Sqlite\SqliteMigrationRunner.cs" />
+    <Compile Include="Ports\Stubs\IAuthKeyStore.cs" />
+    <Compile Include="Ports\Stubs\AuthKeyRecord.cs" />
+    <Compile Include="Ports\Stubs\IDialogRepository.cs" />
+    <Compile Include="Ports\Stubs\DialogRecord.cs" />
+    <Compile Include="Ports\Stubs\IMessageRepository.cs" />
+    <Compile Include="Ports\Stubs\MessageRecord.cs" />
+    <Compile Include="Ports\Stubs\ISyncStateRepository.cs" />
+    <Compile Include="Ports\Stubs\SyncStateRecord.cs" />
+    <Compile Include="Infrastructure\Repositories\AuthKeyStoreState.cs" />
+    <Compile Include="Infrastructure\Repositories\JsonAuthKeyStore.cs" />
+    <Compile Include="Infrastructure\Repositories\DialogRepositoryState.cs" />
+    <Compile Include="Infrastructure\Repositories\JsonDialogRepository.cs" />
+    <Compile Include="Infrastructure\Repositories\MessageRepositoryState.cs" />
+    <Compile Include="Infrastructure\Repositories\JsonMessageRepository.cs" />
+    <Compile Include="Infrastructure\Repositories\SyncStateRepositoryState.cs" />
+    <Compile Include="Infrastructure\Repositories\JsonSyncStateRepository.cs" />
+    <Compile Include="Composition\StorageCompositionRoot.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Runtime.Serialization.Json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+    <!--
+      Storage remains a leaf bounded context: it publishes repository adapters
+      and Composition owns service-registry membership for cross-context ports.
+    -->
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
+    <VisualStudioVersion>12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

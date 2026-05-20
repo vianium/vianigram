@@ -1,0 +1,7 @@
+﻿# CODEOWNERS — vianigram
+#
+# GitHub uses this file to auto-request reviews on pull requests.
+# Format: <path-glob> <space-separated GitHub @handles>
+#
+# Owner-of-last-resort. Sole maintainer at this stage.
+* @AngelCareaga

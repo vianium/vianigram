@@ -1,0 +1,263 @@
+<Page
+    x:Class="Vianigram.App.Pages.Profile.ProfilePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Vianigram.App.Controls"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:ProfilePageViewModel, IsDesignTimeCreatable=True}"
+    Background="{ThemeResource VgBgBrush}">
+
+    <Grid Background="{ThemeResource VgBgBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Height="44"
+                Background="{ThemeResource VgBgBrush}">
+            <Grid Margin="20,0,20,0">
+                <TextBlock x:Uid="ProfileInfoTitle"
+                           Text="info"
+                           FontFamily="{StaticResource VgFont}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource VgFgBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,0,1" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Hidden">
+            <StackPanel>
+                <StackPanel HorizontalAlignment="Center"
+                            Margin="0,8,0,18">
+                    <controls:AvatarCircle AvatarSize="108"
+                                           Initials="{Binding AvatarLetter}"
+                                           BackgroundColor="{StaticResource VgSuccessBrush}"
+                                           HorizontalAlignment="Center" />
+
+                    <TextBlock Text="{Binding DisplayName}"
+                               FontFamily="{StaticResource VgFont}"
+                               FontSize="23"
+                               FontWeight="Normal"
+                               Foreground="{ThemeResource VgFgBrush}"
+                               HorizontalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               Margin="0,12,0,0" />
+
+                    <TextBlock Text="{Binding StatusText}"
+                               Style="{StaticResource VgCaptionStyle}"
+                               Foreground="{ThemeResource VgFg2Brush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,0" />
+                </StackPanel>
+
+                <Grid Height="58"
+                      Margin="0,0,0,0"
+                      Visibility="{Binding ShowOtherActions, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            Style="{StaticResource VgIconButtonStyle}"
+                            Width="74"
+                            Height="58"
+                            Padding="0"
+                            Command="{Binding SendMessageCommand}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Viewbox Width="18" Height="18" Margin="0,2,0,3">
+                                <Path Data="M4 5 H20 V16 H9 L5 20 V16 H4 Z"
+                                      Stroke="{ThemeResource VgAccentBrush}"
+                                      StrokeThickness="1.8"
+                                      StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Width="24"
+                                      Height="24"
+                                      Stretch="None" />
+                            </Viewbox>
+                            <TextBlock x:Uid="ProfileMessageLabel"
+                                       Text="message"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource VgAccentBrush}" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="1"
+                            Style="{StaticResource VgIconButtonStyle}"
+                            Width="74"
+                            Height="58"
+                            Padding="0"
+                            Command="{Binding VoiceCallCommand}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Viewbox Width="18" Height="18" Margin="0,2,0,3">
+                                <Path Data="{StaticResource VgGlyphPhone}"
+                                      Stroke="{ThemeResource VgAccentBrush}"
+                                      StrokeThickness="1.8"
+                                      StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Width="24"
+                                      Height="24"
+                                      Stretch="None" />
+                            </Viewbox>
+                            <TextBlock x:Uid="ProfileCallLabel"
+                                       Text="call"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource VgAccentBrush}" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource VgIconButtonStyle}"
+                            Width="74"
+                            Height="58"
+                            Padding="0"
+                            Command="{Binding VideoCallCommand}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Viewbox Width="19" Height="19" Margin="0,2,0,3">
+                                <Path Data="{StaticResource VgGlyphVideo}"
+                                      Stroke="{ThemeResource VgAccentBrush}"
+                                      StrokeThickness="1.8"
+                                      StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Width="24"
+                                      Height="24"
+                                      Stretch="None" />
+                            </Viewbox>
+                            <TextBlock x:Uid="ProfileVideoLabel"
+                                       Text="video"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource VgAccentBrush}" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="3"
+                            Style="{StaticResource VgIconButtonStyle}"
+                            Width="74"
+                            Height="58"
+                            Padding="0"
+                            Command="{Binding MuteCommand}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Viewbox Width="19" Height="19" Margin="0,2,0,3">
+                                <Path Data="M7 10 C7 7.2 8.9 5.3 12 5.3 C15.1 5.3 17 7.2 17 10 V14 L19 17 H5 L7 14 Z M10 19 H14"
+                                      Stroke="{ThemeResource VgAccentBrush}"
+                                      StrokeThickness="1.8"
+                                      StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Width="24"
+                                      Height="24"
+                                      Stretch="None" />
+                            </Viewbox>
+                            <TextBlock Text="{Binding MuteActionLabel}"
+                                       FontSize="11"
+                                       Foreground="{ThemeResource VgAccentBrush}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <Border Height="1"
+                        Background="{ThemeResource VgDividerBrush}" />
+
+                <StackPanel Margin="20,16,20,0">
+                    <TextBlock x:Uid="ProfileBioLabel"
+                               Text="BIO"
+                               Style="{StaticResource VgMetaStyle}"
+                               CharacterSpacing="120"
+                               Foreground="{ThemeResource VgFg3Brush}" />
+                    <TextBlock Text="{Binding Bio}"
+                               Style="{StaticResource VgBodyStyle}"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Margin="0,7,0,18" />
+
+                    <TextBlock x:Uid="ProfileUsernameLabel"
+                               Text="USERNAME"
+                               Style="{StaticResource VgMetaStyle}"
+                               CharacterSpacing="120"
+                               Foreground="{ThemeResource VgFg3Brush}" />
+                    <TextBlock Text="{Binding Username}"
+                               Style="{StaticResource VgBodyStyle}"
+                               Foreground="{ThemeResource VgAccentBrush}"
+                               Margin="0,7,0,18" />
+
+                    <TextBlock x:Uid="ProfilePhoneLabel"
+                               Text="PHONE"
+                               Style="{StaticResource VgMetaStyle}"
+                               CharacterSpacing="120"
+                               Foreground="{ThemeResource VgFg3Brush}" />
+                    <TextBlock Text="{Binding Phone}"
+                               Style="{StaticResource VgBodyStyle}"
+                               Margin="0,7,0,22" />
+                </StackPanel>
+
+                <Grid Height="58"
+                      Margin="20,0,20,0"
+                      Visibility="{Binding ShowOtherActions, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="34" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Viewbox Grid.Column="0"
+                             Width="19"
+                             Height="19"
+                             HorizontalAlignment="Left"
+                             VerticalAlignment="Center">
+                        <Path Data="M7 10 C7 7.2 8.9 5.3 12 5.3 C15.1 5.3 17 7.2 17 10 V14 L19 17 H5 L7 14 Z M10 19 H14"
+                              Stroke="{ThemeResource VgFg2Brush}"
+                              StrokeThickness="1.7"
+                              StrokeLineJoin="Round"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              Width="24"
+                              Height="24"
+                              Stretch="None" />
+                    </Viewbox>
+
+                    <TextBlock Grid.Column="1"
+                               x:Uid="ProfileNotificationsLabel"
+                               Text="notifications"
+                               Style="{StaticResource VgRowTitleStyle}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+
+                    <ToggleSwitch Grid.Column="2"
+                                  IsOn="{Binding NotificationsEnabled, Mode=TwoWay}"
+                                  Toggled="OnNotificationsToggled"
+                                  OnContent=""
+                                  OffContent=""
+                                  Header=""
+                                  MinWidth="74"
+                                  VerticalAlignment="Center" />
+                </Grid>
+
+                <Button x:Uid="ProfileEditButton"
+                        Content="edit profile"
+                        Style="{StaticResource VgButtonPrimaryStyle}"
+                        Command="{Binding EditCommand}"
+                        Margin="20,16,20,0"
+                        Visibility="{Binding ShowSelfActions, Converter={StaticResource BoolToVisibility}}" />
+
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Style="{StaticResource VgCaptionStyle}"
+                           Foreground="{ThemeResource VgDangerBrush}"
+                           TextWrapping="Wrap"
+                           Margin="20,12,20,20"
+                           Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

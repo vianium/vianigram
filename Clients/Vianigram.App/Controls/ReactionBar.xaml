@@ -1,0 +1,39 @@
+<UserControl
+    x:Class="Vianigram.App.Controls.ReactionBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ItemsControl x:Name="ReactionsItems" Margin="8,2,8,2">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <Border CornerRadius="10"
+                        Padding="6,2,6,2"
+                        Margin="0,0,4,0"
+                        Background="{ThemeResource ListViewItemPlaceholderBackgroundThemeBrush}"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource ListViewItemSelectedBackgroundThemeBrush}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Emoji}"
+                                   FontFamily="Segoe UI Emoji"
+                                   FontSize="14"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Count}"
+                                   FontSize="12"
+                                   Margin="4,0,0,0"
+                                   Opacity="0.8"
+                                   VerticalAlignment="Center"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

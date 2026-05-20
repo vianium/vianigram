@@ -1,0 +1,24 @@
+<UserControl
+    x:Class="Vianigram.App.Controls.UnreadBadge"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid" Visibility="Collapsed">
+        <Border x:Name="BadgeBorder"
+                MinWidth="20"
+                Height="20"
+                CornerRadius="10"
+                Background="{ThemeResource VgAccentBrush}">
+            <TextBlock x:Name="CountText"
+                       Foreground="White"
+                       FontSize="11"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Margin="6,0,6,0" />
+        </Border>
+    </Grid>
+</UserControl>

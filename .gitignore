@@ -1,0 +1,201 @@
+# ============================================================================
+# Vianigram .gitignore
+# Cubre: solución VS (managed C# WP8.1 + native C++/CX/WinRT), packaging UWP,
+# tooling .NET (tl-codegen) y archivos locales/sensibles.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Telegram app credentials (api_id / api_hash) — NEVER commit real values.
+# Real credentials live in *.Local.cs which is gitignored; the committed
+# *.cs ships with placeholders. See TelegramAppConfig.Local.cs.example.
+# ----------------------------------------------------------------------------
+**/TelegramAppConfig.Local.cs
+**/*.Local.cs
+
+# ----------------------------------------------------------------------------
+# Visual Studio — workspace / IDE
+# ----------------------------------------------------------------------------
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.sln.iml
+*.userprefs
+*.swp
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+*.ipch
+ipch/
+.vshistory/
+.vscode/
+.idea/
+
+# ----------------------------------------------------------------------------
+# Managed C# (.csproj) — bin / obj para todas las plataformas
+# Cubre: AnyCPU, ARM, x86, x64 en Debug/Release
+# ----------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Archivos AssemblyInfo regenerables (mantener AssemblyInfo.cs editado a mano)
+**/Properties/AssemblyInfo.Generated.cs
+
+# ----------------------------------------------------------------------------
+# Native C++/CX / WinRT (.vcxproj)
+# ----------------------------------------------------------------------------
+# Salidas de build a nivel de solución (carpeta Debug/ en raíz del repo
+# contiene .dll/.lib/.pdb/.winmd/.pri/.exp/.ilk)
+/Debug/
+/Release/
+/ARM/
+/x64/
+/x86/
+/Win32/
+
+# Salidas de build a nivel de proyecto vcxproj
+**/Debug/
+**/Release/
+**/Win32/
+**/x64/
+**/ARM/
+**/Generated Files/
+
+# Artefactos de compilación nativos
+*.obj
+*.o
+*.lib
+*.exp
+*.ilk
+*.pdb
+*.idb
+*.tlog
+*.tli
+*.tlh
+*.lastbuildstate
+*.unsuccessfulbuild
+*.vcxproj.FileListAbsolute.txt
+*.cache
+
+# WinRT metadata / resources generados
+*.winmd
+*.pri
+
+# ----------------------------------------------------------------------------
+# UWP / Windows Phone 8.1 — packaging
+# AppPackages/ contiene salidas de "Create App Packages" (artefactos de build)
+# ----------------------------------------------------------------------------
+AppPackages/
+BundleArtifacts/
+*.appx
+*.appxbundle
+*.appxupload
+*.appxsym
+*.msix
+*.msixbundle
+*.msixupload
+*.appxrecipe
+
+# Certificados de firma de paquete (NUNCA commitear)
+*.pfx
+*.snk
+*.cer
+*.p12
+
+# StoreAssociation / temp packaging
+package.store/
+GeneratedArtifacts/
+ModelManifest.xml
+
+# ----------------------------------------------------------------------------
+# NuGet
+# ----------------------------------------------------------------------------
+packages/
+!**/packages/build/
+*.nupkg
+*.snupkg
+.nuget/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ----------------------------------------------------------------------------
+# MSBuild / build output adicional
+# ----------------------------------------------------------------------------
+[Bb]uild/
+[Bb]uilds/
+bld/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# ----------------------------------------------------------------------------
+# Test output
+# ----------------------------------------------------------------------------
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+coverage*.xml
+coverage*.json
+*.coverage
+*.coveragexml
+
+# ----------------------------------------------------------------------------
+# StyleCop / ReSharper / análisis
+# ----------------------------------------------------------------------------
+StyleCopReport.xml
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# ----------------------------------------------------------------------------
+# Configuración local / secretos
+# ----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+appsettings.Development.json
+secrets.json
+*.local.config
+*.local.json
+**/Properties/launchSettings.json
+
+# ----------------------------------------------------------------------------
+# Logs / temporales / volcados
+# ----------------------------------------------------------------------------
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.swp
+*.dmp
+
+# ----------------------------------------------------------------------------
+# OS — Windows / macOS / Linux
+# ----------------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+*~
+
+# ----------------------------------------------------------------------------
+# Tooling local (claude / agentes) — mantener rules compartidas si las hay
+# ----------------------------------------------------------------------------
+.claude/settings.local.json
+.claude/cache/
+
+_references/tdlib
+
+_references/telegram-android
+
+_references/telegram-ios

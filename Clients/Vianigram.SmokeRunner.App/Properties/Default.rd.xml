@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Default.rd.xml — runtime directives for the .NET Native compiler (Release).
+  Debug uses CoreCLR and ignores this file. Release on WP8.1 needs the
+  application's own assembly to be reflectable so XAML data-binding (and the
+  ListView's TestRow item template) keeps working after AOT.
+-->
+<Directives xmlns="http://schemas.microsoft.com/netfx/2013/01/metadata">
+  <Application>
+    <Assembly Name="Vianigram.SmokeRunner.App" Dynamic="Required All" />
+    <Assembly Name="Vianigram.SmokeTests" Dynamic="Required All" />
+  </Application>
+</Directives>

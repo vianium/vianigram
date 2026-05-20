@@ -1,0 +1,786 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{C1D2E3F4-A5B6-4C7D-AE01-F1A2B3C4D5E6}</ProjectGuid>
+    <OutputType>AppContainerExe</OutputType>
+    <RootNamespace>Vianigram.App</RootNamespace>
+    <AssemblyName>Vianigram.App</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
+    <SynthesizeLinkMetadata>true</SynthesizeLinkMetadata>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+    <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
+    <AppxBundlePlatforms>arm</AppxBundlePlatforms>
+    <AppxBundle>Auto</AppxBundle>
+  </PropertyGroup>
+  <!-- AnyCPU is provided so the Visual Studio designer / IntelliSense load
+       correctly; deployable bits always come from x86 or ARM. -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\AnyCPU\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\AnyCPU\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="App.xaml.cs">
+      <DependentUpon>App.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="BuildExpiry.cs" />
+    <Compile Include="Pages\ExpiredPage.xaml.cs">
+      <DependentUpon>ExpiredPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\WelcomePage.xaml.cs">
+      <DependentUpon>WelcomePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\PhoneNumberPage.xaml.cs">
+      <DependentUpon>PhoneNumberPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\CountryPickerPage.xaml.cs">
+      <DependentUpon>CountryPickerPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\LanguagePickerPage.xaml.cs">
+      <DependentUpon>LanguagePickerPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\SmsCodePage.xaml.cs">
+      <DependentUpon>SmsCodePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\ChatListPage.xaml.cs">
+      <DependentUpon>ChatListPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\ChatPage.xaml.cs">
+      <DependentUpon>ChatPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ViewModels\ObservableObject.cs" />
+    <Compile Include="ViewModels\BaseViewModel.cs" />
+    <Compile Include="ViewModels\PhoneNumberPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\WelcomePageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\CountryPickerPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\LanguagePickerPageViewModel.cs" />
+    <Compile Include="ViewModels\SmsCodePageViewModel.cs" />
+    <Compile Include="ViewModels\ChatListPageViewModel.cs" />
+    <Compile Include="ViewModels\ChatPageViewModel.cs" />
+    <!-- Auth — page ViewModels (QR, account switcher, passcode, proxy) -->
+    <Compile Include="ViewModels\Pages\AsyncCommand.cs" />
+    <Compile Include="ViewModels\Pages\QrLoginPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\AccountSwitcherPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\PasscodePageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\TwoFaPasswordPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\SignUpPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\ProxySettingsPageViewModel.cs" />
+    <!-- Profile/Contacts page ViewModels -->
+    <Compile Include="ViewModels\Pages\ProfilePageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\EditProfilePageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\GroupInfoPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\ContactsPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\BlockedUsersPageViewModel.cs" />
+    <!-- Auth — page code-behind -->
+    <Compile Include="Pages\Auth\QrLoginPage.xaml.cs">
+      <DependentUpon>QrLoginPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Auth\AccountSwitcherPage.xaml.cs">
+      <DependentUpon>AccountSwitcherPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Auth\PasscodePage.xaml.cs">
+      <DependentUpon>PasscodePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Auth\TwoFaPasswordPage.xaml.cs">
+      <DependentUpon>TwoFaPasswordPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Auth\SignUpPage.xaml.cs">
+      <DependentUpon>SignUpPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Auth\ProxySettingsPage.xaml.cs">
+      <DependentUpon>ProxySettingsPage.xaml</DependentUpon>
+    </Compile>
+    <!-- Profile/Contacts page code-behind -->
+    <Compile Include="Pages\Profile\ProfilePage.xaml.cs">
+      <DependentUpon>ProfilePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Profile\EditProfilePage.xaml.cs">
+      <DependentUpon>EditProfilePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Profile\GroupInfoPage.xaml.cs">
+      <DependentUpon>GroupInfoPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Profile\ContactsPage.xaml.cs">
+      <DependentUpon>ContactsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Profile\BlockedUsersPage.xaml.cs">
+      <DependentUpon>BlockedUsersPage.xaml</DependentUpon>
+    </Compile>
+    <!-- Compose — NewChat / NewChannel / Forward / Poll page ViewModels -->
+    <Compile Include="ViewModels\Pages\NewChatPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\NewChannelPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\ForwardPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\PollPageViewModel.cs" />
+    <!-- Media — MediaViewer page ViewModel -->
+    <Compile Include="ViewModels\Pages\MediaViewerPageViewModel.cs" />
+    <!-- Settings/ActiveSessions/Scheduled/Search ViewModels -->
+    <Compile Include="ViewModels\Pages\SettingsPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\ActiveSessionsPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\ScheduledPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\SearchPageViewModel.cs" />
+    <!-- Calls / Secret / Topics — page ViewModels -->
+    <Compile Include="ViewModels\Pages\CallsPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\CallPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\IncomingCallPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\SecretChatPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\KeyFingerprintPageViewModel.cs" />
+    <Compile Include="ViewModels\Pages\TopicsPageViewModel.cs" />
+    <!-- Compose page code-behind -->
+    <Compile Include="Pages\Compose\NewChatPage.xaml.cs">
+      <DependentUpon>NewChatPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Compose\NewChannelPage.xaml.cs">
+      <DependentUpon>NewChannelPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Compose\ForwardPage.xaml.cs">
+      <DependentUpon>ForwardPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Compose\PollPage.xaml.cs">
+      <DependentUpon>PollPage.xaml</DependentUpon>
+    </Compile>
+    <!-- MediaViewer page code-behind -->
+    <Compile Include="Pages\Media\MediaViewerPage.xaml.cs">
+      <DependentUpon>MediaViewerPage.xaml</DependentUpon>
+    </Compile>
+    <!-- Settings/ActiveSessions/Scheduled/Search code-behind -->
+    <Compile Include="Pages\Settings\SettingsPage.xaml.cs">
+      <DependentUpon>SettingsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Settings\ActiveSessionsPage.xaml.cs">
+      <DependentUpon>ActiveSessionsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Settings\ScheduledPage.xaml.cs">
+      <DependentUpon>ScheduledPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Settings\SearchPage.xaml.cs">
+      <DependentUpon>SearchPage.xaml</DependentUpon>
+    </Compile>
+    <!-- Calls — page code-behind -->
+    <Compile Include="Pages\Calls\CallsPage.xaml.cs">
+      <DependentUpon>CallsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Calls\CallPage.xaml.cs">
+      <DependentUpon>CallPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Calls\IncomingCallPage.xaml.cs">
+      <DependentUpon>IncomingCallPage.xaml</DependentUpon>
+    </Compile>
+    <!-- Secret — page code-behind -->
+    <Compile Include="Pages\Secret\SecretChatPage.xaml.cs">
+      <DependentUpon>SecretChatPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\Secret\KeyFingerprintPage.xaml.cs">
+      <DependentUpon>KeyFingerprintPage.xaml</DependentUpon>
+    </Compile>
+    <!-- Topics — page code-behind -->
+    <Compile Include="Pages\TopicsPage.xaml.cs">
+      <DependentUpon>TopicsPage.xaml</DependentUpon>
+    </Compile>
+    <!-- Shared converters (BoolToVisibilityConverter etc) -->
+    <Compile Include="Converters\BoolToVisibilityConverter.cs" />
+    <Compile Include="Converters\StringNotEmptyToVisibilityConverter.cs" />
+    <Compile Include="Controls\Bubbles\MessageBubbleTemplateSelector.cs" />
+    <Compile Include="Helpers\QrCodeGenerator.cs" />
+    <Compile Include="Services\AppLog.cs" />
+    <Compile Include="Services\AppServices.cs" />
+    <Compile Include="Services\CallNavigationCoordinator.cs" />
+    <Compile Include="Services\Dispatch.cs" />
+    <Compile Include="Services\WindowsPhoneUiDispatcher.cs" />
+    <Compile Include="Services\PushNotificationsService.cs" />
+    <Compile Include="Services\StrippedThumbExpander.cs" />
+    <Compile Include="Services\LocalizedText.cs" />
+    <Compile Include="Services\PeerAvatarFetcher.cs" />
+    <Compile Include="Services\MessageThumbnailFetcher.cs" />
+    <Compile Include="Services\MutedPeersStore.cs" />
+    <Compile Include="Services\LiveTileService.cs" />
+    <Compile Include="Services\BackgroundCoordination.cs" />
+    <Compile Include="Services\BackgroundTaskRegistrar.cs" />
+    <Compile Include="Services\FrameNavigationService.cs" />
+    <Compile Include="Services\Strings.cs" />
+    <Compile Include="Services\LanguageService.cs" />
+    <Compile Include="Services\TelegramCountryCatalog.cs" />
+    <Compile Include="Services\CountrySelectionService.cs" />
+    <!-- App-side navigation foundation -->
+    <Compile Include="Navigation\INavigationService.cs" />
+    <Compile Include="Navigation\Route.cs" />
+    <Compile Include="Navigation\NavigationService.cs" />
+    <!-- App-side view-model factory; partials split across files -->
+    <Compile Include="Services\AppViewModels.cs" />
+    <Compile Include="Services\AppViewModels.AuthProfile.cs" />
+    <Compile Include="Services\AppViewModels.SettingsCompose.cs" />
+    <Compile Include="Services\AppViewModels.MediaCallsSecret.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <!-- Controls (reusable UserControls) -->
+    <Compile Include="Controls\Bubbles\MessageBubble.xaml.cs">
+      <DependentUpon>MessageBubble.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Bubbles\PhotoBubble.xaml.cs">
+      <DependentUpon>PhotoBubble.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Bubbles\VoiceBubble.xaml.cs">
+      <DependentUpon>VoiceBubble.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Bubbles\DocumentBubble.xaml.cs">
+      <DependentUpon>DocumentBubble.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Bubbles\StickerBubble.xaml.cs">
+      <DependentUpon>StickerBubble.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Bubbles\PollBubble.xaml.cs">
+      <DependentUpon>PollBubble.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Bubbles\InfoBubble.xaml.cs">
+      <DependentUpon>InfoBubble.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ReactionBar.xaml.cs">
+      <DependentUpon>ReactionBar.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ReplyBar.xaml.cs">
+      <DependentUpon>ReplyBar.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\TypingIndicator.xaml.cs">
+      <DependentUpon>TypingIndicator.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\DateSeparator.xaml.cs">
+      <DependentUpon>DateSeparator.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ChatListItem.xaml.cs">
+      <DependentUpon>ChatListItem.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\AvatarCircle.xaml.cs">
+      <DependentUpon>AvatarCircle.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\UnreadBadge.xaml.cs">
+      <DependentUpon>UnreadBadge.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\MediaPicker.xaml.cs">
+      <DependentUpon>MediaPicker.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\AudioRecorder.xaml.cs">
+      <DependentUpon>AudioRecorder.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\EmojiPanel.xaml.cs">
+      <DependentUpon>EmojiPanel.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\QrCodeCanvas.cs" />
+    <Compile Include="Controls\StickerPanel.xaml.cs">
+      <DependentUpon>StickerPanel.xaml</DependentUpon>
+    </Compile>
+    <!-- Layout — auth-flow shared shell (AppHeader / AppBarFooter) -->
+    <Compile Include="Controls\Layout\AppHeader.xaml.cs">
+      <DependentUpon>AppHeader.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Layout\AppBarFooter.xaml.cs">
+      <DependentUpon>AppBarFooter.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\Layout\ProgressDots.xaml.cs">
+      <DependentUpon>ProgressDots.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </ApplicationDefinition>
+    <Page Include="Pages\WelcomePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\ExpiredPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\PhoneNumberPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\CountryPickerPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\LanguagePickerPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\SmsCodePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\ChatListPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\ChatPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Auth — XAML pages -->
+    <Page Include="Pages\Auth\QrLoginPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Auth\AccountSwitcherPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Auth\PasscodePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Auth\TwoFaPasswordPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Auth\SignUpPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Auth\ProxySettingsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Profile/Contacts XAML pages -->
+    <Page Include="Pages\Profile\ProfilePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Profile\EditProfilePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Profile\GroupInfoPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Profile\ContactsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Profile\BlockedUsersPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Compose — NewChat / NewChannel / Forward / Poll XAML pages -->
+    <Page Include="Pages\Compose\NewChatPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Compose\NewChannelPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Compose\ForwardPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Compose\PollPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- MediaViewer XAML page -->
+    <Page Include="Pages\Media\MediaViewerPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Settings/ActiveSessions/Scheduled/Search XAML pages -->
+    <Page Include="Pages\Settings\SettingsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Settings\ActiveSessionsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Settings\ScheduledPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Settings\SearchPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Calls — XAML pages -->
+    <Page Include="Pages\Calls\CallsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Calls\CallPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Calls\IncomingCallPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Secret — XAML pages -->
+    <Page Include="Pages\Secret\SecretChatPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\Secret\KeyFingerprintPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Topics — XAML page -->
+    <Page Include="Pages\TopicsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Controls (UserControls) -->
+    <Page Include="Controls\Bubbles\MessageBubble.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Bubbles\PhotoBubble.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Bubbles\VoiceBubble.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Bubbles\DocumentBubble.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Bubbles\StickerBubble.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Bubbles\PollBubble.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Bubbles\InfoBubble.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ReactionBar.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ReplyBar.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\TypingIndicator.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\DateSeparator.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ChatListItem.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\AvatarCircle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\UnreadBadge.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\MediaPicker.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\AudioRecorder.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\EmojiPanel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\StickerPanel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Layout — auth-flow shared shell -->
+    <Page Include="Controls\Layout\AppHeader.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Layout\AppBarFooter.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\Layout\ProgressDots.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Theme dictionaries (tokens, typography, buttons, glyph paths). -->
+    <Page Include="Themes\Tokens.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Themes\Typography.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Themes\Buttons.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Themes\Glyphs.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Themes\Components.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Localization resources. -->
+    <PRIResource Include="Strings\en-US\Resources.resw" />
+    <PRIResource Include="Strings\es-ES\Resources.resw" />
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\BadgeLogo.scale-100.png" />
+    <Content Include="Assets\BadgeLogo.scale-140.png" />
+    <Content Include="Assets\BadgeLogo.scale-240.png" />
+    <Content Include="Assets\Logo.scale-100.png" />
+    <Content Include="Assets\Logo.scale-140.png" />
+    <Content Include="Assets\Logo.scale-240.png" />
+    <Content Include="Assets\SmallLogo.scale-100.png" />
+    <Content Include="Assets\SmallLogo.scale-140.png" />
+    <Content Include="Assets\SmallLogo.scale-240.png" />
+    <Content Include="Assets\SplashScreen.scale-100.png" />
+    <Content Include="Assets\SplashScreen.scale-140.png" />
+    <Content Include="Assets\SplashScreen.scale-240.png" />
+    <Content Include="Assets\Square71x71Logo.scale-100.png" />
+    <Content Include="Assets\Square71x71Logo.scale-140.png" />
+    <Content Include="Assets\Square71x71Logo.scale-240.png" />
+    <Content Include="Assets\StoreLogo.scale-100.png" />
+    <Content Include="Assets\StoreLogo.scale-140.png" />
+    <Content Include="Assets\StoreLogo.scale-240.png" />
+    <Content Include="Assets\WideLogo.scale-100.png" />
+    <Content Include="Assets\WideLogo.scale-140.png" />
+    <Content Include="Assets\WideLogo.scale-240.png" />
+    <Content Include="Assets\WelcomeLogo.scale-240.png" />
+    <!-- Country list (ISO + dial codes + names) sourced from Telegram-Android's
+         TMessagesProj/src/main/assets/countries.txt. Vendored locally rather
+         than linked from the legacy _vendor tree so the project ships without
+         path dependencies on a sibling checkout. -->
+    <Content Include="Assets\TelegramCountries.txt" />
+    <Content Include="Properties\Default.rd.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+    <Reference Include="System.Runtime.WindowsRuntime" />
+    <Reference Include="System.Linq" />
+  </ItemGroup>
+  <!--
+    PROJECT REFERENCES
+
+    Wired contexts:
+        Vianigram.Kernel, Vianigram.Composition,
+        Vianigram.Account, Vianigram.Chats, Vianigram.Messages,
+        Vianigram.Sync, Vianigram.Storage.
+
+    Native bits flow transitively through Vianigram.Composition (which carries
+    direct vcxproj references to Vianigram.Core.Crypto / Tl / MTProto so the
+    real MtProtoChannel ships with the app package).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+    <!-- Background notifications: the WinRT component
+         containing MtprotoMaintenanceTask + VoipKeepAliveTask. The
+         App package needs to ship its .winmd so the OS host process
+         can load the entry-point types declared in the manifest. -->
+    <ProjectReference Include="..\Vianigram.App.BackgroundTasks\Vianigram.App.BackgroundTasks.csproj">
+      <Project>{D1A2B3C4-E5F6-4789-A012-B3C4D5E6F701}</Project>
+      <Name>Vianigram.App.BackgroundTasks</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Composition\Vianigram.Composition.csproj">
+      <Project>{9A1B2C3D-0002-4002-8000-000000000002}</Project>
+      <Name>Vianigram.Composition</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Account\Vianigram.Account.csproj">
+      <Project>{B1C2D3E4-F5A6-4B7C-8D90-E1F2A3B4C5D6}</Project>
+      <Name>Vianigram.Account</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Chats\Vianigram.Chats.csproj">
+      <Project>{B2C3D4E5-F6A7-4B8C-9D01-E2F3A4B5C6D7}</Project>
+      <Name>Vianigram.Chats</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Messages\Vianigram.Messages.csproj">
+      <Project>{B3C4D5E6-F7A8-4B9C-AD01-E3F4A5B6C7D8}</Project>
+      <Name>Vianigram.Messages</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Sync\Vianigram.Sync.csproj">
+      <Project>{B4C5D6E7-F8A9-4BAC-BE01-E4F5A6B7C8D9}</Project>
+      <Name>Vianigram.Sync</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Storage\Vianigram.Storage.csproj">
+      <Project>{B5C6D7E8-F9AA-4BBD-CF01-E5F6A7B8C9DA}</Project>
+      <Name>Vianigram.Storage</Name>
+    </ProjectReference>
+    <!-- Calls / Media / SecretChats inbound port surfaces.
+         These contexts ship as separate assemblies; the App-layer VMs in the
+         Media / Calls / Secret / Topics cluster bind against their inbound
+         ports (ICallsApi / IMediaApi / ISecretChatsApi). Composition wiring
+         is degraded-mode tolerant — TryResolve returns null until the
+         per-context outbound RPC adapter is registered. -->
+    <ProjectReference Include="..\..\Core\Vianigram.Media\Vianigram.Media.csproj">
+      <Project>{B7C8D9EA-FBAC-4DDE-EF03-A7B8C9DAEBFC}</Project>
+      <Name>Vianigram.Media</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Calls\Vianigram.Calls.csproj">
+      <Project>{BACBE2ED-2DDF-4FFB-B106-DAEBFCADBECF}</Project>
+      <Name>Vianigram.Calls</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.SecretChats\Vianigram.SecretChats.csproj">
+      <Project>{B9CAD1EC-1CCE-4FFA-A005-C9DAEBFCADBE}</Project>
+      <Name>Vianigram.SecretChats</Name>
+    </ProjectReference>
+    <!-- Contacts / Privacy / Notifications inbound port surfaces.
+         Auth + Profile cluster VMs bind against IContactsApi / IPrivacyApi /
+         INotificationsApi. Composition wiring is degraded-mode tolerant —
+         TryResolve returns null until the per-context outbound adapter is
+         registered. -->
+    <ProjectReference Include="..\..\Core\Vianigram.Contacts\Vianigram.Contacts.csproj">
+      <Project>{B6C7D8E9-FAAB-4CCD-DF02-F6A7B8C9DAEB}</Project>
+      <Name>Vianigram.Contacts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Privacy\Vianigram.Privacy.csproj">
+      <Project>{C3FE0522-61F3-4F3F-F40A-DBECFD0E1F20}</Project>
+      <Name>Vianigram.Privacy</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Notifications\Vianigram.Notifications.csproj">
+      <Project>{C0DBE2FE-3EE0-4F0C-C107-EBFCADBECFD0}</Project>
+      <Name>Vianigram.Notifications</Name>
+    </ProjectReference>
+    <!-- Settings / Search inbound port surfaces.
+         Settings + Compose cluster VMs bind against ISettingsApi / ISearchApi.
+         Composition wiring is degraded-mode tolerant — TryResolve returns null
+         until the per-context outbound adapter is registered. -->
+    <ProjectReference Include="..\..\Core\Vianigram.Settings\Vianigram.Settings.csproj">
+      <Project>{C1DCF300-4FF1-4F1D-D208-FCADBECFD0E1}</Project>
+      <Name>Vianigram.Settings</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Search\Vianigram.Search.csproj">
+      <Project>{C2EDF411-50F2-4F2E-E309-CADBECFD0E1F}</Project>
+      <Name>Vianigram.Search</Name>
+    </ProjectReference>
+    <!-- Explicit project refs to silence XAML compiler WMC1006 about
+         transitively-referenced WinMDs. These contexts are also lazy-loaded in
+         the composition root; the explicit refs only ensure their DLLs are
+         present in the App's reference graph at XAML compile time. -->
+    <ProjectReference Include="..\..\Core\Vianigram.Stickers\Vianigram.Stickers.csproj">
+      <Project>{B8C9D0EB-0BBD-4EEF-F004-B8C9DAEBFCAD}</Project>
+      <Name>Vianigram.Stickers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.SecretChats\Vianigram.SecretChats.csproj">
+      <Project>{B9CAD1EC-1CCE-4FFA-A005-C9DAEBFCADBE}</Project>
+      <Name>Vianigram.SecretChats</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Calls\Vianigram.Calls.csproj">
+      <Project>{BACBE2ED-2DDF-4FFB-B106-DAEBFCADBECF}</Project>
+      <Name>Vianigram.Calls</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Core\Vianigram.Media\Vianigram.Media.csproj">
+      <Project>{B7C8D9EA-FBAC-4DDE-EF03-A7B8C9DAEBFC}</Project>
+      <Name>Vianigram.Media</Name>
+    </ProjectReference>
+    <!-- Native WinRT Media component — exposes MediaApi/WebpDecodeOutput ref classes
+         consumed via WinMD projection. Without this explicit reference the appx
+         was missing Vianigram.Media.dll (native), causing "Element not found"
+         on activation at runtime. -->
+    <ProjectReference Include="..\..\Core\Vianigram.Core.Media\Vianigram.Core.Media.vcxproj">
+      <Project>{D4E5F6A7-B8C9-4DAE-AF12-B4C5D6E7F8AA}</Project>
+      <Name>Vianigram.Core.Media</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <!-- SQLite for Windows Phone 8.1. The Extension SDK ships the
+       native sqlite3.dll inside the appx; Vianigram.Storage P/Invokes against
+       it via DllImport("sqlite3"). Microsoft.VCLibs is a required dependency
+       per the SDK manifest. -->
+  <PropertyGroup>
+    <SqliteWp81RedistFlavor Condition=" '$(Configuration)' == 'Debug' ">Debug</SqliteWp81RedistFlavor>
+    <SqliteWp81RedistFlavor Condition=" '$(SqliteWp81RedistFlavor)' == '' ">Retail</SqliteWp81RedistFlavor>
+    <SqliteWp81Root>C:\Program Files (x86)\Microsoft SDKs\WindowsPhoneApp\v8.1\ExtensionSDKs\SQLite.WP81\3.38.0</SqliteWp81Root>
+    <TgcallsNativeOutputDir Condition=" '$(Platform)' == 'ARM' ">$(MSBuildThisFileDirectory)..\..\ARM\$(Configuration)\Vianium.Tgcalls\</TgcallsNativeOutputDir>
+    <TgcallsNativeOutputDir Condition=" '$(Platform)' != 'ARM' ">$(MSBuildThisFileDirectory)..\..\$(Configuration)\Vianium.Tgcalls\</TgcallsNativeOutputDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="$(SqliteWp81Root)\Redist\$(SqliteWp81RedistFlavor)\$(Platform)\sqlite3.dll">
+      <Link>sqlite3.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(TgcallsNativeOutputDir)Vianium.Tgcalls.dll">
+      <Link>Vianium.Tgcalls.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <SDKReference Include="Microsoft.VCLibs, Version=12.0" />
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
+    <VisualStudioVersion>14.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

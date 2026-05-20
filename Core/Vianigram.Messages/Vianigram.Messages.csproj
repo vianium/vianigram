@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{B3C4D5E6-F7A8-4B9C-AD01-E3F4A5B6C7D8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vianigram.Messages</RootNamespace>
+    <AssemblyName>Vianigram.Messages</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>12</MinimumVisualStudioVersion>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Domain\MessageError.cs" />
+    <Compile Include="Domain\ValueObjects\PeerKey.cs" />
+    <Compile Include="Domain\ValueObjects\MessageId.cs" />
+    <Compile Include="Domain\ValueObjects\MessageEntity.cs" />
+    <Compile Include="Domain\ValueObjects\MessageContent.cs" />
+    <Compile Include="Domain\ValueObjects\DeliveryState.cs" />
+    <Compile Include="Domain\ValueObjects\Unit.cs" />
+    <Compile Include="Domain\ValueObjects\MessagePage.cs" />
+    <Compile Include="Domain\ValueObjects\PollSpec.cs" />
+    <Compile Include="Domain\Entities\Message.cs" />
+    <Compile Include="Domain\Entities\MessageStream.cs" />
+    <Compile Include="Domain\Events\MessageEvents.cs" />
+    <Compile Include="Application\Commands\SendTextMessageCommand.cs" />
+    <Compile Include="Application\Commands\EditTextMessageCommand.cs" />
+    <Compile Include="Application\Commands\DeleteMessageCommand.cs" />
+    <Compile Include="Application\Commands\MarkAsReadCommand.cs" />
+    <Compile Include="Application\Commands\LoadHistoryCommand.cs" />
+    <Compile Include="Application\Queries\GetMessagesQuery.cs" />
+    <Compile Include="Application\Queries\GetMessageQuery.cs" />
+    <Compile Include="Application\Handlers\SendTextMessageHandler.cs" />
+    <Compile Include="Application\Handlers\LoadHistoryHandler.cs" />
+    <Compile Include="Application\Handlers\MarkAsReadHandler.cs" />
+    <Compile Include="Application\Handlers\EditTextMessageHandler.cs" />
+    <Compile Include="Application\Handlers\DeleteMessageHandler.cs" />
+    <Compile Include="Application\Handlers\ForwardMessagesHandler.cs" />
+    <Compile Include="Application\Handlers\SendPollHandler.cs" />
+    <Compile Include="Application\Handlers\ScheduleTextHandler.cs" />
+    <Compile Include="Application\Handlers\GetScheduledHandler.cs" />
+    <Compile Include="Application\Handlers\SendScheduledNowHandler.cs" />
+    <Compile Include="Application\Handlers\DeleteScheduledHandler.cs" />
+    <Compile Include="Application\MessagesApplication.cs" />
+    <Compile Include="Ports\Inbound\IMessagesApi.cs" />
+    <Compile Include="Ports\Inbound\MessagesChangedEventArgs.cs" />
+    <Compile Include="Ports\Outbound\IMessageRepository.cs" />
+    <Compile Include="Ports\Outbound\IMtProtoRpcPort.cs" />
+    <Compile Include="Ports\Outbound\IMessageIdGenerator.cs" />
+    <Compile Include="Ports\Outbound\IPeerAccessHashPort.cs" />
+    <Compile Include="Infrastructure\TlEncoder.cs" />
+    <Compile Include="Infrastructure\TlDecoder.cs" />
+    <Compile Include="Infrastructure\InMemoryMessageRepository.cs" />
+    <Compile Include="Infrastructure\MonotonicMessageIdGenerator.cs" />
+    <Compile Include="Api\V1\MessagesApiV1.cs" />
+    <Compile Include="Composition\MessagesCompositionRoot.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
+    <VisualStudioVersion>12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

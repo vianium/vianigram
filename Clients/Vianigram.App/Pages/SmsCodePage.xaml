@@ -1,0 +1,135 @@
+<Page
+    x:Class="Vianigram.App.Pages.SmsCodePage"
+    x:Name="RootPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:layout="using:Vianigram.App.Controls.Layout"
+    xmlns:conv="using:Vianigram.App.Converters"
+    mc:Ignorable="d"
+    Background="{ThemeResource VgBgBrush}">
+
+    <Page.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- Single-digit underline cell. The bottom rule is accent when the
+             cell is filled, fg-3 otherwise — handled imperatively in the
+             code-behind via the cell's Foreground / BorderBrush brushes. -->
+        <Style x:Key="VgDigitInputStyle" TargetType="TextBox">
+            <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+            <Setter Property="FontSize" Value="36" />
+            <Setter Property="FontWeight" Value="Light" />
+            <Setter Property="Foreground" Value="{ThemeResource VgFgBrush}" />
+            <Setter Property="Background" Value="{ThemeResource VgBgBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource VgFg3Brush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MaxLength" Value="1" />
+            <Setter Property="InputScope" Value="Number" />
+            <Setter Property="Height" Value="64" />
+        </Style>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header: VIANIGRAM strap + "enter code" title -->
+        <layout:AppHeader x:Name="HeaderControl" Grid.Row="0" />
+
+        <!-- Body -->
+        <Grid Grid.Row="1">
+            <StackPanel Margin="24,20,24,0" MaxWidth="500" HorizontalAlignment="Stretch">
+
+                <!-- Intro line ("we sent a 5-digit code to") -->
+                <TextBlock Text="{Binding IntroText}"
+                           Style="{StaticResource VgBodyStyle}"
+                           Foreground="{ThemeResource VgFg2Brush}"
+                           TextWrapping="Wrap" />
+
+                <!-- Phone + edit number link on the same wrapping line -->
+                <StackPanel Orientation="Horizontal" Margin="0,2,0,28">
+                    <TextBlock Text="{Binding PhoneDisplay}"
+                               Style="{StaticResource VgBodyStyle}"
+                               Foreground="{ThemeResource VgFgBrush}" />
+                    <TextBlock Text="{Binding EditNumberText}"
+                               Style="{StaticResource VgBodyStyle}"
+                               Foreground="{ThemeResource VgAccentBrush}"
+                               Margin="8,0,0,0"
+                               Tapped="OnEditNumberTapped" />
+                </StackPanel>
+
+                <!-- 5 digit cells -->
+                <Grid Margin="0,0,0,32">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="Digit1" Grid.Column="0"
+                             Style="{StaticResource VgDigitInputStyle}"
+                             TextChanged="OnDigitTextChanged"
+                             KeyDown="OnDigitKeyDown" />
+                    <TextBox x:Name="Digit2" Grid.Column="2"
+                             Style="{StaticResource VgDigitInputStyle}"
+                             TextChanged="OnDigitTextChanged"
+                             KeyDown="OnDigitKeyDown" />
+                    <TextBox x:Name="Digit3" Grid.Column="4"
+                             Style="{StaticResource VgDigitInputStyle}"
+                             TextChanged="OnDigitTextChanged"
+                             KeyDown="OnDigitKeyDown" />
+                    <TextBox x:Name="Digit4" Grid.Column="6"
+                             Style="{StaticResource VgDigitInputStyle}"
+                             TextChanged="OnDigitTextChanged"
+                             KeyDown="OnDigitKeyDown" />
+                    <TextBox x:Name="Digit5" Grid.Column="8"
+                             Style="{StaticResource VgDigitInputStyle}"
+                             TextChanged="OnDigitTextChanged"
+                             KeyDown="OnDigitKeyDown" />
+                </Grid>
+
+                <!-- Resend code link / countdown -->
+                <TextBlock Text="{Binding ResendText}"
+                           Style="{StaticResource VgCaptionStyle}"
+                           Foreground="{ThemeResource VgFg2Brush}"
+                           Visibility="{Binding CanResend, Converter={StaticResource BoolToVisibility}, ConverterParameter=invert}"
+                           Margin="0,0,0,12" />
+
+                <TextBlock Text="{Binding ResendText}"
+                           Style="{StaticResource VgCaptionStyle}"
+                           Foreground="{ThemeResource VgAccentBrush}"
+                           Visibility="{Binding CanResend, Converter={StaticResource BoolToVisibility}}"
+                           Tapped="OnResendTapped"
+                           Margin="0,0,0,12" />
+
+                <!-- Indeterminate progress dots -->
+                <layout:ProgressDots IsActive="{Binding IsBusy}" Margin="0,4,0,0" />
+
+                <!-- Status / error -->
+                <TextBlock Text="{Binding ResendStatusText}"
+                           Style="{StaticResource VgCaptionStyle}"
+                           Foreground="{ThemeResource VgFg2Brush}"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding HasResendStatus, Converter={StaticResource BoolToVisibility}}"
+                           Margin="0,12,0,0" />
+
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Style="{StaticResource VgCaptionStyle}"
+                           Foreground="{ThemeResource VgDangerBrush}"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}"
+                           Margin="0,12,0,0" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

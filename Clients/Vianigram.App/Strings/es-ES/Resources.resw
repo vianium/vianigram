@@ -1,0 +1,670 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Welcome screen -->
+  <data name="WelcomePill.Text" xml:space="preserve">
+    <value>CLIENTE TELEGRAM DE TERCEROS</value>
+  </data>
+  <data name="WelcomeWordmark.Text" xml:space="preserve">
+    <value>vianigram</value>
+  </data>
+  <data name="WelcomeVersion.Text" xml:space="preserve">
+    <value>0.1.0.0</value>
+  </data>
+  <data name="WelcomeTagline.Text" xml:space="preserve">
+    <value>un cliente no oficial de telegram nativo para windows phone — pivotes rápidos, tilt, y el metro que recuerdas.</value>
+  </data>
+  <data name="WelcomeBullet1.Text" xml:space="preserve">
+    <value>· MTPROTO 2.0</value>
+  </data>
+  <data name="WelcomeBullet2.Text" xml:space="preserve">
+    <value>· CHATS SECRETOS E2EE</value>
+  </data>
+  <data name="WelcomeBullet3.Text" xml:space="preserve">
+    <value>· CÓDIGO ABIERTO</value>
+  </data>
+  <data name="WelcomeContinue.Content" xml:space="preserve">
+    <value>continuar con telegram</value>
+  </data>
+  <data name="WelcomeScanQr.Content" xml:space="preserve">
+    <value>escanear qr</value>
+  </data>
+  <data name="WelcomeLanguage.Content" xml:space="preserve">
+    <value>español ▾</value>
+  </data>
+  <data name="WelcomeDisclaimer.Text" xml:space="preserve">
+    <value>no afiliado con telegram fz-llc. utiliza la api oficial de telegram bajo sus términos.</value>
+  </data>
+
+  <!-- Phone-number screen -->
+  <data name="PhoneNumberAppName.Text" xml:space="preserve">
+    <value>VIANIGRAM</value>
+  </data>
+  <data name="PhoneNumberTitle.Text" xml:space="preserve">
+    <value>Tu teléfono</value>
+  </data>
+  <data name="PhoneNumberDescription.Text" xml:space="preserve">
+    <value>Por favor, confirma tu código de país e introduce tu número de teléfono.</value>
+  </data>
+  <data name="PhoneNumberCountryLabel.Text" xml:space="preserve">
+    <value>PAÍS</value>
+  </data>
+  <data name="PhoneNumberDefaultCountry" xml:space="preserve">
+    <value>Japón</value>
+  </data>
+  <data name="PhoneNumberDefaultCode" xml:space="preserve">
+    <value>+81</value>
+  </data>
+  <data name="PhoneNumberDefaultPlaceholder" xml:space="preserve">
+    <value>90 1234 5678</value>
+  </data>
+
+  <!-- Code-entry screen -->
+  <data name="SmsCodeAppName.Text" xml:space="preserve">
+    <value>VIANIGRAM</value>
+  </data>
+  <data name="SmsCodePageTitle.Text" xml:space="preserve">
+    <value>código</value>
+  </data>
+  <data name="SmsCodeIntro" xml:space="preserve">
+    <value>te enviamos un código de 5 dígitos a</value>
+  </data>
+  <data name="SmsCodeEditNumber" xml:space="preserve">
+    <value>editar número</value>
+  </data>
+  <data name="SmsCodeResendCountdown" xml:space="preserve">
+    <value>reenviar {0} en 0:{1:00}</value>
+  </data>
+  <data name="SmsCodeResendNow" xml:space="preserve">
+    <value>reenviar {0}</value>
+  </data>
+  <data name="SmsCodeResendUnavailable" xml:space="preserve">
+    <value>reenvío no disponible</value>
+  </data>
+  <data name="SmsCodeResendSuccess" xml:space="preserve">
+    <value>código reenviado.</value>
+  </data>
+  <data name="SmsCodeDeliverySms" xml:space="preserve">
+    <value>sms</value>
+  </data>
+  <data name="SmsCodeDeliveryCall" xml:space="preserve">
+    <value>llamada</value>
+  </data>
+  <data name="SmsCodeDeliveryFlashCall" xml:space="preserve">
+    <value>llamada flash</value>
+  </data>
+  <data name="SmsCodeDeliveryCode" xml:space="preserve">
+    <value>código</value>
+  </data>
+  <data name="SmsCodeIncorrect" xml:space="preserve">
+    <value>El código es incorrecto.</value>
+  </data>
+  <data name="SmsCodeExpired" xml:space="preserve">
+    <value>El código expiró. Solicita uno nuevo.</value>
+  </data>
+  <data name="SmsCodeAuthRestart" xml:space="preserve">
+    <value>La sesión de inicio expiró. Solicita un código nuevo.</value>
+  </data>
+  <data name="SmsCodeNotInState" xml:space="preserve">
+    <value>Flujo de inicio desincronizado — vuelve atrás y reenvía el código.</value>
+  </data>
+  <data name="SmsCodeAccountUnavailable" xml:space="preserve">
+    <value>Servicio de cuenta no disponible.</value>
+  </data>
+  <data name="SmsCodeMissing" xml:space="preserve">
+    <value>Introduce el código que recibiste.</value>
+  </data>
+  <data name="SmsCodeTwoFaUnavailable" xml:space="preserve">
+    <value>La autenticacion de dos factores requiere tu contrasena en la nube.</value>
+  </data>
+  <data name="SmsCodeTitle" xml:space="preserve">
+    <value>Introduce el código</value>
+  </data>
+  <data name="SmsCodeInstructionGeneric" xml:space="preserve">
+    <value>Introduce el código enviado a {0}.</value>
+  </data>
+  <data name="SmsCodeInstructionApp" xml:space="preserve">
+    <value>Abre Telegram en otro dispositivo e introduce el código enviado a {0}.</value>
+  </data>
+  <data name="SmsCodeInstructionSms" xml:space="preserve">
+    <value>Enviamos un código por SMS a {0}.</value>
+  </data>
+  <data name="SmsCodeInstructionCall" xml:space="preserve">
+    <value>Telegram llamará a {0}; introduce el código de la llamada.</value>
+  </data>
+  <data name="SmsCodeInstructionFlashCall" xml:space="preserve">
+    <value>Telegram verificará {0} con una llamada flash.</value>
+  </data>
+  <data name="SmsCodePlaceholder" xml:space="preserve">
+    <value>12345</value>
+  </data>
+  <data name="SmsCodeVerifyButton" xml:space="preserve">
+    <value>Verificar</value>
+  </data>
+
+  <!-- Country picker screen -->
+  <data name="CountryPickerAppName.Text" xml:space="preserve">
+    <value>VIANIGRAM</value>
+  </data>
+  <data name="CountryPickerTitle.Text" xml:space="preserve">
+    <value>país</value>
+  </data>
+  <data name="CountryPickerDescription.Text" xml:space="preserve">
+    <value>Selecciona tu país o región. Vianigram aplicará el código oficial de Telegram.</value>
+  </data>
+  <data name="CountryPickerSearchPlaceholder" xml:space="preserve">
+    <value>Buscar país o código</value>
+  </data>
+  <data name="CountryPickerEmptyText.Text" xml:space="preserve">
+    <value>No se encontraron países.</value>
+  </data>
+  <data name="CountryPickerLoadError" xml:space="preserve">
+    <value>No se pudo cargar la lista de países. Intenta de nuevo en un momento.</value>
+  </data>
+
+  <!-- Language picker screen -->
+  <data name="LanguagePickerAppName.Text" xml:space="preserve">
+    <value>VIANIGRAM</value>
+  </data>
+  <data name="LanguagePickerTitle.Text" xml:space="preserve">
+    <value>idioma</value>
+  </data>
+  <data name="LanguagePickerDescription.Text" xml:space="preserve">
+    <value>elige tu idioma preferido. la app se recargará para aplicar el cambio.</value>
+  </data>
+
+  <!-- QR login -->
+  <data name="QrLoginAppName.Text" xml:space="preserve">
+    <value>VIANIGRAM</value>
+  </data>
+  <data name="QrLoginPageTitle.Text" xml:space="preserve">
+    <value>escanear qr</value>
+  </data>
+  <data name="QrLoginDescription.Text" xml:space="preserve">
+    <value>Abre Vianigram en otro dispositivo. Ve a Ajustes -&gt; Dispositivos -&gt; Vincular dispositivo.</value>
+  </data>
+  <data name="QrLoginRefreshButton.Content" xml:space="preserve">
+    <value>actualizar qr</value>
+  </data>
+  <data name="QrLoginUsePhoneButton.Content" xml:space="preserve">
+    <value>usar número de teléfono</value>
+  </data>
+  <data name="QrLoginStatusConnecting" xml:space="preserve">
+    <value>Conectando con Telegram...</value>
+  </data>
+  <data name="QrLoginStatusGenerating" xml:space="preserve">
+    <value>Generando QR seguro...</value>
+  </data>
+  <data name="QrLoginStatusAccountUnavailable" xml:space="preserve">
+    <value>Servicio de cuenta no disponible.</value>
+  </data>
+  <data name="QrLoginStatusReady" xml:space="preserve">
+    <value>esperando escaneo...</value>
+  </data>
+  <data name="QrLoginStatusUnexpected" xml:space="preserve">
+    <value>Error inesperado: {0}.</value>
+  </data>
+  <data name="QrLoginErrorUnknown" xml:space="preserve">
+    <value>Error desconocido.</value>
+  </data>
+  <data name="QrLoginErrorNetwork" xml:space="preserve">
+    <value>Error de red: {0}</value>
+  </data>
+  <data name="QrLoginErrorNetworkNoConnection" xml:space="preserve">
+    <value>sin conexión</value>
+  </data>
+  <data name="QrLoginErrorFlood" xml:space="preserve">
+    <value>Demasiados intentos. Vuelve a intentar en {0} s.</value>
+  </data>
+  <data name="QrLoginStatusWaiting" xml:space="preserve">
+    <value>Esperando escaneo... Se actualiza en {0}s.</value>
+  </data>
+  <data name="QrLoginStatusRefreshing" xml:space="preserve">
+    <value>Actualizando QR...</value>
+  </data>
+  <data name="QrLoginStatusExpired" xml:space="preserve">
+    <value>El QR expiro. Actualizando...</value>
+  </data>
+  <data name="QrLoginStatusAccepted" xml:space="preserve">
+    <value>Vinculando dispositivo...</value>
+  </data>
+  <data name="QrLoginStatusLinking" xml:space="preserve">
+    <value>Vinculando tu dispositivo — esto puede tardar unos segundos...</value>
+  </data>
+  <data name="QrLoginStatusTwoFa" xml:space="preserve">
+    <value>Se requiere contrasena 2FA.</value>
+  </data>
+  <data name="QrLoginStatusSignUpRequired" xml:space="preserve">
+    <value>Este numero necesita registro. Usa registro por telefono en este dispositivo.</value>
+  </data>
+  <data name="QrLoginStatusRetry" xml:space="preserve">
+    <value>No se pudo conectar con Telegram. Toca reintentar.</value>
+  </data>
+  <data name="QrLoginRetryButton.Content" xml:space="preserve">
+    <value>Reintentar</value>
+  </data>
+
+  <!-- Profile screen -->
+  <data name="ProfileInfoTitle.Text" xml:space="preserve">
+    <value>info</value>
+  </data>
+  <data name="ProfileMessageLabel.Text" xml:space="preserve">
+    <value>mensaje</value>
+  </data>
+  <data name="ProfileCallLabel.Text" xml:space="preserve">
+    <value>llamar</value>
+  </data>
+  <data name="ProfileVideoLabel.Text" xml:space="preserve">
+    <value>video</value>
+  </data>
+  <data name="ProfileMuteAction" xml:space="preserve">
+    <value>silenciar</value>
+  </data>
+  <data name="ProfileUnmuteAction" xml:space="preserve">
+    <value>reactivar</value>
+  </data>
+  <data name="ProfileBioLabel.Text" xml:space="preserve">
+    <value>BIO</value>
+  </data>
+  <data name="ProfileUsernameLabel.Text" xml:space="preserve">
+    <value>NOMBRE DE USUARIO</value>
+  </data>
+  <data name="ProfilePhoneLabel.Text" xml:space="preserve">
+    <value>TELÉFONO</value>
+  </data>
+  <data name="ProfileNotificationsLabel.Text" xml:space="preserve">
+    <value>notificaciones</value>
+  </data>
+  <data name="ProfileEditButton.Content" xml:space="preserve">
+    <value>editar perfil</value>
+  </data>
+
+  <!-- Calls history screen -->
+  <data name="CallsAppName.Text" xml:space="preserve">
+    <value>VIANIGRAM</value>
+  </data>
+  <data name="CallsTitle.Text" xml:space="preserve">
+    <value>llamadas</value>
+  </data>
+  <data name="CallsAllPivot.Header" xml:space="preserve">
+    <value>todas</value>
+  </data>
+  <data name="CallsMissedPivot.Header" xml:space="preserve">
+    <value>perdidas</value>
+  </data>
+  <data name="CallsNewCallAppBar.Label" xml:space="preserve">
+    <value>nueva llamada</value>
+  </data>
+  <data name="CallsSearchAppBar.Label" xml:space="preserve">
+    <value>buscar</value>
+  </data>
+  <data name="ChatListCallsAppBar.Label" xml:space="preserve">
+    <value>llamadas</value>
+  </data>
+  <data name="CallsAllEmptyText.Text" xml:space="preserve">
+    <value>sin llamadas aún</value>
+  </data>
+  <data name="CallsMissedEmptyText.Text" xml:space="preserve">
+    <value>sin llamadas perdidas</value>
+  </data>
+  <data name="CallsDirectionOutgoing" xml:space="preserve">
+    <value>saliente</value>
+  </data>
+  <data name="CallsDirectionIncoming" xml:space="preserve">
+    <value>entrante</value>
+  </data>
+  <data name="CallsDirectionMissed" xml:space="preserve">
+    <value>perdida</value>
+  </data>
+  <data name="CallsDateToday" xml:space="preserve">
+    <value>hoy</value>
+  </data>
+  <data name="CallsDateYesterday" xml:space="preserve">
+    <value>ayer</value>
+  </data>
+  <data name="CallsUnknownPeer" xml:space="preserve">
+    <value>desconocido</value>
+  </data>
+  <data name="ProfileStatusRecently" xml:space="preserve">
+    <value>visto recientemente</value>
+  </data>
+  <data name="CallsServiceUnavailable" xml:space="preserve">
+    <value>el servicio de llamadas no está disponible.</value>
+  </data>
+  <data name="CallsUnexpectedError" xml:space="preserve">
+    <value>error inesperado: </value>
+  </data>
+  <data name="CallsUnknownError" xml:space="preserve">
+    <value>error desconocido.</value>
+  </data>
+  <data name="CallsNetworkError" xml:space="preserve">
+    <value>error de red.</value>
+  </data>
+  <data name="CallsAlreadyInCall" xml:space="preserve">
+    <value>ya estás en una llamada.</value>
+  </data>
+  <data name="CallsNotFound" xml:space="preserve">
+    <value>llamada no encontrada.</value>
+  </data>
+
+  <!-- Two-step verification password -->
+  <data name="TwoFaPasswordAppName.Text" xml:space="preserve">
+    <value>VIANIGRAM</value>
+  </data>
+  <data name="TwoFaPasswordPageTitle.Text" xml:space="preserve">
+    <value>contraseña</value>
+  </data>
+  <data name="TwoFaPasswordDescription.Text" xml:space="preserve">
+    <value>esta cuenta está protegida con verificación en dos pasos. ingresa tu contraseña en la nube para continuar.</value>
+  </data>
+  <data name="TwoFaPasswordInput.PlaceholderText" xml:space="preserve">
+    <value>contraseña</value>
+  </data>
+  <data name="TwoFaPasswordForgotButton.Content" xml:space="preserve">
+    <value>¿olvidaste tu contraseña?</value>
+  </data>
+  <data name="TwoFaPasswordBackLabel.Text" xml:space="preserve">
+    <value>atrás</value>
+  </data>
+  <data name="TwoFaPasswordSubmitLabel.Text" xml:space="preserve">
+    <value>enviar</value>
+  </data>
+  <data name="TwoFaPasswordHintFormat" xml:space="preserve">
+    <value>pista: {0}</value>
+  </data>
+  <data name="TwoFaPasswordAccountUnavailable" xml:space="preserve">
+    <value>Servicio de cuenta no disponible.</value>
+  </data>
+  <data name="TwoFaPasswordUnexpected" xml:space="preserve">
+    <value>Error inesperado: {0}.</value>
+  </data>
+  <data name="TwoFaPasswordUnknown" xml:space="preserve">
+    <value>Error desconocido.</value>
+  </data>
+  <data name="TwoFaPasswordInvalid" xml:space="preserve">
+    <value>Contraseña incorrecta. Inténtalo de nuevo.</value>
+  </data>
+  <data name="TwoFaPasswordNetwork" xml:space="preserve">
+    <value>Error de red: {0}</value>
+  </data>
+  <data name="TwoFaPasswordNoConnection" xml:space="preserve">
+    <value>sin conexión</value>
+  </data>
+  <data name="TwoFaPasswordForgotUnavailable" xml:space="preserve">
+    <value>La recuperación de contraseña aún no está disponible aquí.</value>
+  </data>
+
+  <data name="SignUpAppName.Text" xml:space="preserve">
+    <value>VIANIGRAM</value>
+  </data>
+  <data name="SignUpPageTitle.Text" xml:space="preserve">
+    <value>cuenta nueva</value>
+  </data>
+  <data name="SignUpDescription.Text" xml:space="preserve">
+    <value>este numero es nuevo en telegram. ingresa tu nombre para crear la cuenta.</value>
+  </data>
+  <data name="SignUpFirstNameInput.PlaceholderText" xml:space="preserve">
+    <value>nombre</value>
+  </data>
+  <data name="SignUpLastNameInput.PlaceholderText" xml:space="preserve">
+    <value>apellido</value>
+  </data>
+  <data name="SignUpAccountUnavailable" xml:space="preserve">
+    <value>Servicio de cuenta no disponible.</value>
+  </data>
+  <data name="SignUpUnexpected" xml:space="preserve">
+    <value>Error inesperado: {0}.</value>
+  </data>
+  <data name="SignUpUnknown" xml:space="preserve">
+    <value>Error desconocido.</value>
+  </data>
+  <data name="SignUpNetwork" xml:space="preserve">
+    <value>Error de red: {0}</value>
+  </data>
+
+  <!-- Common -->
+  <data name="CommonBack" xml:space="preserve">
+    <value>atrás</value>
+  </data>
+  <data name="CommonNext" xml:space="preserve">
+    <value>siguiente</value>
+  </data>
+  <data name="CommonBackAppBar.Label" xml:space="preserve">
+    <value>atrás</value>
+  </data>
+  <data name="CommonNextAppBar.Label" xml:space="preserve">
+    <value>siguiente</value>
+  </data>
+  <data name="CommonSubmitAppBar.Label" xml:space="preserve">
+    <value>enviar</value>
+  </data>
+
+  <!-- Phone-number error messages -->
+  <data name="ErrorsAccountUnavailable" xml:space="preserve">
+    <value>Servicio de cuenta no disponible — fallo al iniciar.</value>
+  </data>
+  <data name="ErrorsPhoneMissingNumber" xml:space="preserve">
+    <value>Ingresa un número de teléfono en formato E.164 (ej. +525555550100).</value>
+  </data>
+  <data name="ErrorsPhoneInvalid" xml:space="preserve">
+    <value>Número inválido. Usa el formato E.164, ej. +525555550100.</value>
+  </data>
+  <data name="ErrorsPhoneFlood" xml:space="preserve">
+    <value>Demasiados intentos. Vuelve a intentar en {0} s.</value>
+  </data>
+  <data name="ErrorsPhoneNetwork" xml:space="preserve">
+    <value>Error de red: {0}</value>
+  </data>
+  <data name="ErrorsPhoneNetworkNoConnection" xml:space="preserve">
+    <value>sin conexión</value>
+  </data>
+  <data name="ErrorsPhoneDcMigration" xml:space="preserve">
+    <value>Migración de DC requerida (Fase 2.1).</value>
+  </data>
+  <data name="ErrorsPhoneUnexpected" xml:space="preserve">
+    <value>Error inesperado: {0}.</value>
+  </data>
+  <data name="ErrorsPhoneTimeout" xml:space="preserve">
+    <value>La conexión tardó demasiado. Toca siguiente para reintentar.</value>
+  </data>
+
+  <!-- EXPIRED PAGE — pantalla terminal del time-bomb (BuildExpiry). -->
+  <data name="ExpiredPageHeader.Text" xml:space="preserve">
+    <value>build expirado</value>
+  </data>
+  <data name="ExpiredPageTitle.Text" xml:space="preserve">
+    <value>Esta alpha ha expirado</value>
+  </data>
+  <data name="ExpiredPageBody.Text" xml:space="preserve">
+    <value>Vianigram es una alpha pública con tiempo de vida limitado. Iteramos rápido y necesitamos testers en el último build para que el feedback siga siendo útil. Descarga el nuevo build desde el canal de Telegram para seguir usando la app.</value>
+  </data>
+  <data name="ExpiredPageDateLabel.Text" xml:space="preserve">
+    <value>Expiró el:</value>
+  </data>
+  <data name="ExpiredPageTelegramButton.Content" xml:space="preserve">
+    <value>descargar nuevo build (Telegram)</value>
+  </data>
+  <data name="ExpiredPageDonateButton.Content" xml:space="preserve">
+    <value>invítame un café</value>
+  </data>
+  <data name="ExpiredPageFooter.Text" xml:space="preserve">
+    <value>Reinstalar o actualizar conserva tu sesión, caché de chats y configuración. El próximo build llega con la fecha de expiración renovada.</value>
+  </data>
+  <!-- Phase 8 (notifications i18n) — versión española. -->
+  <data name="Common.YouPrefix" xml:space="preserve"><value>Tú: </value></data>
+  <data name="Notif.Title.NewMessage" xml:space="preserve"><value>Nuevo mensaje</value></data>
+  <data name="Notif.Title.DirectMessage" xml:space="preserve"><value>Mensaje directo</value></data>
+  <data name="Notif.Title.GroupChat" xml:space="preserve"><value>Chat de grupo</value></data>
+  <data name="Notif.Title.Channel" xml:space="preserve"><value>Canal</value></data>
+  <data name="Notif.Title.Vianigram" xml:space="preserve"><value>Vianigram</value></data>
+  <data name="Notif.Body.Generic" xml:space="preserve"><value>(mensaje)</value></data>
+  <data name="Notif.Sender.Someone" xml:space="preserve"><value>Alguien</value></data>
+  <data name="Notif.Call.IncomingCall" xml:space="preserve"><value>llamada entrante</value></data>
+  <data name="Notif.Call.IncomingVideoCall" xml:space="preserve"><value>videollamada entrante</value></data>
+  <data name="Notif.Call.UnknownCaller" xml:space="preserve"><value>Llamante desconocido</value></data>
+  <data name="Service.Generic" xml:space="preserve"><value>mensaje de servicio</value></data>
+  <data name="Service.GroupCreated" xml:space="preserve"><value>creó el grupo</value></data>
+  <data name="Service.GroupCreatedNamed" xml:space="preserve"><value>creó el grupo "{0}"</value></data>
+  <data name="Service.ChannelCreated" xml:space="preserve"><value>creó el canal</value></data>
+  <data name="Service.ChannelCreatedNamed" xml:space="preserve"><value>creó el canal "{0}"</value></data>
+  <data name="Service.GroupTitleChanged" xml:space="preserve"><value>cambió el nombre del grupo</value></data>
+  <data name="Service.GroupTitleChangedTo" xml:space="preserve"><value>cambió el nombre del grupo a "{0}"</value></data>
+  <data name="Service.GroupPhotoChanged" xml:space="preserve"><value>cambió la foto del grupo</value></data>
+  <data name="Service.GroupPhotoRemoved" xml:space="preserve"><value>eliminó la foto del grupo</value></data>
+  <data name="Service.JoinedGroup" xml:space="preserve"><value>se unió al grupo</value></data>
+  <data name="Service.AddedMember" xml:space="preserve"><value>añadió un miembro</value></data>
+  <data name="Service.AddedNMembers" xml:space="preserve"><value>añadió {0} miembros</value></data>
+  <data name="Service.LeftGroup" xml:space="preserve"><value>salió del grupo</value></data>
+  <data name="Service.RemovedMember" xml:space="preserve"><value>eliminó un miembro</value></data>
+  <data name="Service.JoinedViaInviteLink" xml:space="preserve"><value>se unió mediante un enlace de invitación</value></data>
+  <data name="Service.JoinedTelegram" xml:space="preserve"><value>se unió a Telegram</value></data>
+  <data name="Service.PinnedMessage" xml:space="preserve"><value>fijó un mensaje</value></data>
+  <data name="Service.ClearedHistory" xml:space="preserve"><value>vació el historial</value></data>
+  <data name="Service.ScreenshotTaken" xml:space="preserve"><value>tomó una captura de pantalla</value></data>
+  <data name="Service.AutoDeleteEnabled" xml:space="preserve"><value>activó autoeliminación tras {0}</value></data>
+  <data name="Service.AutoDeleteDisabled" xml:space="preserve"><value>desactivó la autoeliminación de mensajes</value></data>
+  <data name="Service.PhoneCall" xml:space="preserve"><value>📞 llamada telefónica</value></data>
+  <data name="Service.PhoneCallDuration" xml:space="preserve"><value>📞 llamada telefónica ({0})</value></data>
+  <data name="Service.VideoCall" xml:space="preserve"><value>📞 videollamada</value></data>
+  <data name="Service.VideoCallDuration" xml:space="preserve"><value>📞 videollamada ({0})</value></data>
+  <data name="Service.MissedPhoneCall" xml:space="preserve"><value>📞 llamada telefónica perdida</value></data>
+  <data name="Service.MissedVideoCall" xml:space="preserve"><value>📞 videollamada perdida</value></data>
+  <data name="Service.GroupCallStarted" xml:space="preserve"><value>🎙 inició una sala de voz</value></data>
+  <data name="Service.GroupCallEnded" xml:space="preserve"><value>🎙 finalizó la sala de voz ({0})</value></data>
+  <data name="Service.GroupCallScheduled" xml:space="preserve"><value>🎙 programó una sala de voz</value></data>
+  <data name="Service.GroupCallInvitedMember" xml:space="preserve"><value>🎙 invitó a un miembro a la sala de voz</value></data>
+  <data name="Service.GroupCallInvitedMembers" xml:space="preserve"><value>🎙 invitó a {0} miembros a la sala de voz</value></data>
+  <data name="Service.ConferenceCall" xml:space="preserve"><value>🎙 llamada en conferencia</value></data>
+  <data name="Service.GameScore" xml:space="preserve"><value>🎮 obtuvo {0} puntos</value></data>
+  <data name="Service.GiftPremium" xml:space="preserve"><value>🎁 envió un regalo Premium</value></data>
+  <data name="Service.GiftPremiumDays" xml:space="preserve"><value>🎁 envió un regalo Premium por {0} días</value></data>
+  <data name="Service.GiftPremiumMonths" xml:space="preserve"><value>🎁 envió un regalo Premium por {0} meses</value></data>
+  <data name="Service.GiftCode" xml:space="preserve"><value>🎁 envió un código de regalo</value></data>
+  <data name="Service.StarGift" xml:space="preserve"><value>⭐ envió un regalo de estrella</value></data>
+  <data name="Service.SentStars" xml:space="preserve"><value>⭐ envió estrellas</value></data>
+  <data name="Service.WonStars" xml:space="preserve"><value>⭐ ganó estrellas en un sorteo</value></data>
+  <data name="Service.GiveawayLaunched" xml:space="preserve"><value>🎁 inició un sorteo</value></data>
+  <data name="Service.GiveawayResults" xml:space="preserve"><value>🎁 resultados del sorteo</value></data>
+  <data name="Service.PaymentSent" xml:space="preserve"><value>💰 pago enviado</value></data>
+  <data name="Service.PaymentReceived" xml:space="preserve"><value>💰 pago recibido</value></data>
+  <data name="Service.PaymentRefunded" xml:space="preserve"><value>💰 pago reembolsado</value></data>
+  <data name="Service.MigratedToSupergroup" xml:space="preserve"><value>migró a un supergrupo</value></data>
+  <data name="Service.MigratedFromGroup" xml:space="preserve"><value>migrado desde un grupo</value></data>
+  <data name="Service.TopicCreated" xml:space="preserve"><value>creó un tema</value></data>
+  <data name="Service.TopicCreatedNamed" xml:space="preserve"><value>creó el tema "{0}"</value></data>
+  <data name="Service.TopicEdited" xml:space="preserve"><value>editó un tema</value></data>
+  <data name="Service.ChatThemeChanged" xml:space="preserve"><value>cambió el tema del chat</value></data>
+  <data name="Service.WallpaperChanged" xml:space="preserve"><value>cambió el fondo</value></data>
+  <data name="Service.WebViewDataSent" xml:space="preserve"><value>envió datos vía web app</value></data>
+  <data name="Service.BotAllowed" xml:space="preserve"><value>autorizó un bot</value></data>
+  <data name="Service.PeerShared" xml:space="preserve"><value>compartió un contacto</value></data>
+  <data name="Service.PeerShareReceived" xml:space="preserve"><value>recibió un contacto compartido</value></data>
+  <data name="Service.SuggestedProfilePhoto" xml:space="preserve"><value>sugirió una foto de perfil</value></data>
+  <data name="Service.Boosted" xml:space="preserve"><value>impulsó el canal</value></data>
+  <data name="Service.BoostedNTimes" xml:space="preserve"><value>impulsó el canal {0} veces</value></data>
+  <data name="Service.GeoNearby" xml:space="preserve"><value>📍 está ahora cerca</value></data>
+  <data name="Service.Ttl.Now" xml:space="preserve"><value>ya</value></data>
+  <data name="Service.Ttl.OneSecond" xml:space="preserve"><value>1 segundo</value></data>
+  <data name="Service.Ttl.NSeconds" xml:space="preserve"><value>{0} segundos</value></data>
+  <data name="Service.Ttl.OneMinute" xml:space="preserve"><value>1 minuto</value></data>
+  <data name="Service.Ttl.NMinutes" xml:space="preserve"><value>{0} minutos</value></data>
+  <data name="Service.Ttl.OneHour" xml:space="preserve"><value>1 hora</value></data>
+  <data name="Service.Ttl.NHours" xml:space="preserve"><value>{0} horas</value></data>
+  <data name="Service.Ttl.OneDay" xml:space="preserve"><value>1 día</value></data>
+  <data name="Service.Ttl.NDays" xml:space="preserve"><value>{0} días</value></data>
+  <data name="Service.Ttl.OneWeek" xml:space="preserve"><value>1 semana</value></data>
+  <data name="Service.Ttl.NWeeks" xml:space="preserve"><value>{0} semanas</value></data>
+  <data name="Service.Ttl.OneMonth" xml:space="preserve"><value>1 mes</value></data>
+  <data name="Service.Ttl.NMonths" xml:space="preserve"><value>{0} meses</value></data>
+  <data name="Service.Ttl.OneYear" xml:space="preserve"><value>1 año</value></data>
+  <data name="Service.Ttl.NYears" xml:space="preserve"><value>{0} años</value></data>
+  <data name="Media.Photo" xml:space="preserve"><value>📷 Foto</value></data>
+  <data name="Media.Voice" xml:space="preserve"><value>🎤 Mensaje de voz</value></data>
+  <data name="Media.Music" xml:space="preserve"><value>🎵 Música</value></data>
+  <data name="Media.VideoNote" xml:space="preserve"><value>🎥 Videomensaje</value></data>
+  <data name="Media.Video" xml:space="preserve"><value>🎬 Vídeo</value></data>
+  <data name="Media.Sticker" xml:space="preserve"><value>Sticker</value></data>
+  <data name="Media.AnimatedEmoji" xml:space="preserve"><value>Emoji animado</value></data>
+  <data name="Media.Gif" xml:space="preserve"><value>🎞 GIF</value></data>
+  <data name="Media.File" xml:space="preserve"><value>📎 Archivo</value></data>
+  <data name="Media.Contact" xml:space="preserve"><value>👤 Contacto</value></data>
+  <data name="Media.Location" xml:space="preserve"><value>📍 Ubicación</value></data>
+  <data name="Media.LiveLocation" xml:space="preserve"><value>📍 Ubicación en directo</value></data>
+  <data name="Media.Venue" xml:space="preserve"><value>📍 Lugar</value></data>
+  <data name="Media.Game" xml:space="preserve"><value>🎮 Juego</value></data>
+  <data name="Media.Invoice" xml:space="preserve"><value>💰 Factura</value></data>
+  <data name="Media.Poll" xml:space="preserve"><value>📊 Encuesta</value></data>
+  <data name="Media.Link" xml:space="preserve"><value>🔗 Enlace</value></data>
+  <data name="Media.Unsupported" xml:space="preserve"><value>Mensaje no soportado</value></data>
+  <data name="Media.Dice" xml:space="preserve"><value>🎲 Dado</value></data>
+  <data name="Media.Story" xml:space="preserve"><value>📷 Historia</value></data>
+  <data name="Media.Giveaway" xml:space="preserve"><value>🎁 Sorteo</value></data>
+  <data name="Media.GiveawayResults" xml:space="preserve"><value>🎁 Resultados del sorteo</value></data>
+  <data name="Media.PaidMedia" xml:space="preserve"><value>📷 Multimedia de pago</value></data>
+  <data name="Media.Generic" xml:space="preserve"><value>Multimedia</value></data>
+  <data name="Tile.Header" xml:space="preserve"><value>VIANIGRAM</value></data>
+  <data name="Tile.ZeroSubtitle" xml:space="preserve"><value>Sin mensajes nuevos</value></data>
+  <data name="Tile.UnreadOne" xml:space="preserve"><value>1 mensaje sin leer</value></data>
+  <data name="Tile.UnreadMany" xml:space="preserve"><value>{0} mensajes sin leer</value></data>
+  <data name="Tile.UnreadInChats" xml:space="preserve"><value>{0} sin leer en {1} chats</value></data>
+  <data name="Tile.Connecting" xml:space="preserve"><value>Conectando…</value></data>
+  <data name="Tile.Offline" xml:space="preserve"><value>Sin conexión</value></data>
+</root>

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vianigram — WP8.1 / Win10 Mobile UI System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #0a0a0a; color: #fff; font-family: var(--vg-font); }
+  * { box-sizing: border-box; }
+
+  /* Page transition keyframes — turnstile (forward) and slide-back */
+  @keyframes vg-page-in {
+    from { transform: perspective(1200px) rotateY(-90deg); transform-origin: left center; opacity: 0; }
+    to   { transform: perspective(1200px) rotateY(0deg);   transform-origin: left center; opacity: 1; }
+  }
+  @keyframes vg-turnstile-in {
+    from { transform: perspective(1200px) rotateY(-90deg); opacity: 0; }
+    to   { transform: perspective(1200px) rotateY(0deg);   opacity: 1; }
+  }
+  @keyframes vg-slide-back-in {
+    from { transform: translateX(-30%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+
+  /* Annotations on the canvas */
+  .vg-anno {
+    position: absolute;
+    font: 400 12px/16px ui-monospace, "Cascadia Mono", "Consolas", monospace;
+    color: rgba(255,255,255,0.55);
+    max-width: 220px;
+    pointer-events: none;
+  }
+  .vg-anno strong { color: #00ABA9; font-weight: 600; }
+  .vg-anno-line { border-top: 1px dashed rgba(255,255,255,0.25); margin: 8px 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="glyphs.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="screens-auth.jsx"></script>
+<script type="text/babel" src="screens-main.jsx"></script>
+<script type="text/babel" src="screens-compose.jsx"></script>
+<script type="text/babel" src="screens-media.jsx"></script>
+<script type="text/babel" src="screens-settings.jsx"></script>
+<script type="text/babel" src="screens-calls.jsx"></script>
+<script type="text/babel" src="screens-new.jsx"></script>
+<script type="text/babel" src="screens-extras.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const ACCENTS = /*EDITMODE-BEGIN*/{
+  "accent": "#1BA1E2",
+  "theme": "light"
+}/*EDITMODE-END*/;
+
+const ACCENT_OPTIONS = [
+  { v: '#00ABA9', n: 'cyan' },
+  { v: '#7E3878', n: 'mauve' },
+  { v: '#E51400', n: 'magenta' },
+  { v: '#A4C400', n: 'lime' },
+  { v: '#F09609', n: 'orange' },
+  { v: '#1BA1E2', n: 'blue' },
+  { v: '#60A917', n: 'green' },
+  { v: '#AA00FF', n: 'violet' }
+];
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(ACCENTS);
+
+  // Apply theme + accent globally
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', tweaks.theme);
+    document.documentElement.style.setProperty('--vg-accent', tweaks.accent);
+  }, [tweaks.theme, tweaks.accent]);
+
+  return (
+    <>
+      <DesignCanvas
+        title="vianigram — telegram client for wp8.1 / win10 mobile"
+        subtitle="modern/metro design language · 33 screens · dark default · cyan accent"
+      >
+        {/* TOKENS + COMPONENTS */}
+        <DCSection id="foundations" title="foundations · tokens & components">
+          <DCArtboard id="tokens" label="design tokens" width={1080} height={760}>
+            <ExtraPages.TokensPage />
+          </DCArtboard>
+          <DCArtboard id="components" label="component library" width={1080} height={840}>
+            <ExtraPages.ComponentsPage />
+          </DCArtboard>
+        </DCSection>
+
+        {/* HERO FLOW — clickable */}
+        <DCSection id="hero" title="hero flow · clickable prototype">
+          <DCArtboard id="hero-prototype" label="welcome → phone → sms → chats → conversation" width={520} height={680}>
+            <div style={{ width: 520, height: 680, background: '#141414', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: 16, left: 20, font: '400 11px/14px ui-monospace, "Cascadia Mono", monospace', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em' }}>
+                tap to navigate · turnstile pivot transitions · long-press list rows for tilt
+              </div>
+              <div style={{ width: 360, height: 640, boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 8px #1a1a1a, 0 0 0 9px #2a2a2a' }}>
+                <ExtraPages.HeroFlow />
+              </div>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        {/* AUTH FLOW */}
+        <DCSection id="auth" title="auth · 5 screens">
+          <DCArtboard id="welcome" label="01 welcome" width={360} height={640}>
+            <AuthScreens.WelcomeScreen onNext={() => {}} onQR={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="phone" label="02 phone entry" width={360} height={640}>
+            <AuthScreens.PhoneScreen onNext={() => {}} onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="sms" label="03 sms code" width={360} height={640}>
+            <AuthScreens.SmsScreen onNext={() => {}} onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="2fa" label="04 2fa password" width={360} height={640}>
+            <AuthScreens.TwoFAScreen onNext={() => {}} onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="qr" label="05 qr login" width={360} height={640}>
+            <AuthScreens.QRScreen onBack={() => {}} onPhone={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* MAIN SHELL */}
+        <DCSection id="shell" title="main shell · pivot root + states">
+          <DCArtboard id="chats-wvga" label="06 chat list · wvga 360" width={360} height={640}>
+            <MainScreens.ChatListScreen onOpenChat={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="chats-hd" label="06 chat list · hd 480" width={480} height={853}>
+            <div className="vg-phone vg-phone-hd">
+              <MainScreens.ChatListScreen onOpenChat={() => {}} />
+            </div>
+          </DCArtboard>
+          <DCArtboard id="chats-empty" label="06 · empty state" width={360} height={640}>
+            <MainScreens.ChatListScreen state="empty" />
+          </DCArtboard>
+          <DCArtboard id="chats-loading" label="06 · loading state" width={360} height={640}>
+            <MainScreens.ChatListScreen state="loading" />
+          </DCArtboard>
+          <DCArtboard id="chats-light" label="06 · light theme" width={360} height={640}>
+            <div data-theme="light" style={{ width: 360, height: 640 }}>
+              <MainScreens.ChatListScreen onOpenChat={() => {}} />
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        {/* CONVERSATION */}
+        <DCSection id="conversation" title="conversation · 1:1, group, channel + states">
+          <DCArtboard id="chat-1to1" label="07 chat (1:1)" width={360} height={640}>
+            <MainScreens.ConversationScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="chat-group" label="08 chat (group)" width={360} height={640}>
+            <MainScreens.GroupChatScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="chat-channel" label="09 chat (channel)" width={360} height={640}>
+            <MainScreens.ChannelScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="chat-empty" label="07 · empty state" width={360} height={640}>
+            <MainScreens.ConversationScreen state="empty" />
+          </DCArtboard>
+          <DCArtboard id="chat-loading" label="07 · loading state" width={360} height={640}>
+            <MainScreens.ConversationScreen state="loading" />
+          </DCArtboard>
+          <DCArtboard id="chat-error" label="07 · error state" width={360} height={640}>
+            <MainScreens.ConversationScreen state="error" />
+          </DCArtboard>
+          <DCArtboard id="chat-light" label="07 · light theme" width={360} height={640}>
+            <div data-theme="light" style={{ width: 360, height: 640 }}>
+              <MainScreens.ConversationScreen onBack={() => {}} />
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        {/* COMPOSE */}
+        <DCSection id="compose" title="compose · 5 screens">
+          <DCArtboard id="contact-picker" label="10 new chat / contact picker" width={360} height={640}>
+            <ComposeScreens.ContactPickerScreen onBack={() => {}} title="new chat" />
+          </DCArtboard>
+          <DCArtboard id="newgroup-1" label="11 new group · members" width={360} height={640}>
+            <ComposeScreens.ContactPickerScreen onBack={() => {}} multi title="new group" stepLabel="step 1 · select members" />
+          </DCArtboard>
+          <DCArtboard id="newgroup-2" label="12 new group · metadata" width={360} height={640}>
+            <ComposeScreens.NewGroupMetaScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="newchannel" label="13 new channel" width={360} height={640}>
+            <ComposeScreens.NewChannelScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="forward" label="14 forward picker" width={360} height={640}>
+            <ComposeScreens.ForwardPickerScreen onBack={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* MEDIA */}
+        <DCSection id="media" title="media · 4 screens">
+          <DCArtboard id="media-photo" label="15 media · photo" width={360} height={640}>
+            <MediaScreens.MediaPhotoScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="media-video" label="16 media · video" width={360} height={640}>
+            <MediaScreens.MediaVideoScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="voice" label="17 voice playback" width={360} height={640}>
+            <MediaScreens.VoicePlaybackScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="stickers" label="18 sticker / gif picker" width={360} height={640}>
+            <MediaScreens.StickerPickerScreen onBack={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* PROFILE / SETTINGS */}
+        <DCSection id="settings" title="profile & settings · 7 screens">
+          <DCArtboard id="self" label="19 self profile / edit" width={360} height={640}>
+            <SettingsScreens.SelfProfileScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="other" label="20 other user profile" width={360} height={640}>
+            <SettingsScreens.OtherProfileScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="groupinfo" label="21 group info" width={360} height={640}>
+            <SettingsScreens.GroupInfoScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="settings-root" label="22 settings root (pivot)" width={360} height={640}>
+            <SettingsScreens.SettingsRootScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="settings-light" label="22 · light theme" width={360} height={640}>
+            <div data-theme="light" style={{ width: 360, height: 640 }}>
+              <SettingsScreens.SettingsRootScreen onBack={() => {}} />
+            </div>
+          </DCArtboard>
+          <DCArtboard id="notifs" label="23 notifications" width={360} height={640}>
+            <SettingsScreens.NotificationsSettingsScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="privacy" label="24 privacy & security" width={360} height={640}>
+            <SettingsScreens.PrivacySettingsScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="sessions" label="25 active sessions" width={360} height={640}>
+            <SettingsScreens.ActiveSessionsScreen onBack={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* CALLS + SECRET */}
+        <DCSection id="calls" title="calls · 2 screens">
+          <DCArtboard id="call-out" label="26 outgoing / in-call" width={360} height={640}>
+            <CallScreens.OutgoingCallScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="call-in" label="27 incoming call" width={360} height={640}>
+            <CallScreens.IncomingCallScreen onBack={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="stories" title="stories · 3 screens">
+          <DCArtboard id="stories-list" label="29 stories list" width={360} height={640}>
+            <NewScreens.StoriesScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="story-viewer" label="30 story viewer" width={360} height={640}>
+            <NewScreens.StoryViewerScreen onBack={() => {}} />
+          </DCArtboard>
+          <DCArtboard id="story-camera" label="33 story camera" width={360} height={640}>
+            <NewScreens.StoryCameraScreen onBack={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="callslist" title="calls list · 1 screen">
+          <DCArtboard id="calls-list" label="31 calls list (pivot)" width={360} height={640}>
+            <NewScreens.CallsListScreen onBack={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="contacts" title="contacts · 1 screen">
+          <DCArtboard id="contacts" label="32 contacts" width={360} height={640}>
+            <NewScreens.ContactsScreen onBack={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="secret" title="secret chat · 1 screen">
+          <DCArtboard id="secret-key" label="28 encryption key fingerprint" width={360} height={640}>
+            <CallScreens.SecretKeyScreen onBack={() => {}} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* SYSTEM NOTES */}
+        <DCSection id="notes" title="system notes · gestures, app bar overflow, motion">
+          <DCArtboard id="notes-card" label="interaction notes" width={1080} height={520}>
+            <div style={{ width: 1080, height: 520, background: '#000', color: '#fff', padding: 48, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 36, fontFamily: 'var(--vg-font)' }}>
+              {[
+                { t: 'tilt-press', body: 'every list row + button uses a perspective transform (±3°) toward the press point. on touchend the row springs back over 120ms. signature wp interaction.' },
+                { t: 'pivot swipe', body: 'horizontal swipe between sections. headers parallax at 1.5× content speed. adjacent header peeks from the right edge to telegraph swipeability.' },
+                { t: 'swipe gestures', body: 'left-swipe a chat row to mute · right-swipe to pin. revealed actions use the row-height accent fill, no rounded corners.' },
+                { t: 'app bar overflow', body: 'ellipsis (•••) on the chat-list app bar reveals: new group · new channel · contacts · saved messages · calls · settings.' },
+                { t: 'page transitions', body: 'forward navigation: turnstile (rotateY around left edge, 380ms). back: slide-from-left (280ms). no bounce, no rubber-band, no material ripple.' },
+                { t: 'progress', body: 'indeterminate: 5 accent dots, 2.4s loop, sliding left→right with stagger. determinate: 2px hair-thin accent bar at top of content area.' }
+              ].map(n => (
+                <div key={n.t}>
+                  <div style={{ font: '300 22px/26px var(--vg-font)', marginBottom: 8 }}>{n.t}</div>
+                  <div style={{ font: '400 14px/20px var(--vg-font)', color: 'rgba(255,255,255,0.65)' }}>{n.body}</div>
+                </div>
+              ))}
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        {/* JOURNEY 1: First-launch login → see first chat */}
+        <DCSection id="journey1" title="journey · first-launch login → first chat">
+          <DCArtboard id="j1-1" label="step 1 — welcome" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><AuthScreens.WelcomeScreen /></div></DCArtboard>
+          <DCArtboard id="j1-2" label="step 2 — phone" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><AuthScreens.PhoneScreen /></div></DCArtboard>
+          <DCArtboard id="j1-3" label="step 3 — sms" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><AuthScreens.SmsScreen /></div></DCArtboard>
+          <DCArtboard id="j1-4" label="step 4 — chat list" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><MainScreens.ChatListScreen /></div></DCArtboard>
+          <DCArtboard id="j1-5" label="step 5 — conversation" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><MainScreens.ConversationScreen /></div></DCArtboard>
+        </DCSection>
+
+        {/* JOURNEY 2: Send a photo with caption to a group */}
+        <DCSection id="journey2" title="journey · send a photo to a group">
+          <DCArtboard id="j2-1" label="step 1 — chat list" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><MainScreens.ChatListScreen /></div></DCArtboard>
+          <DCArtboard id="j2-2" label="step 2 — group chat" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><MainScreens.GroupChatScreen /></div></DCArtboard>
+          <DCArtboard id="j2-3" label="step 3 — sticker/gif sheet" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><MediaScreens.StickerPickerScreen /></div></DCArtboard>
+          <DCArtboard id="j2-4" label="step 4 — photo viewer" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><MediaScreens.MediaPhotoScreen /></div></DCArtboard>
+          <DCArtboard id="j2-5" label="step 5 — group chat (sent)" width={280} height={500}><div style={{transform:'scale(0.778)',transformOrigin:'top left'}}><MainScreens.GroupChatScreen /></div></DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+
+      <TweaksPanel title="vianigram tweaks">
+        <TweakSection title="theme">
+          <TweakRadio label="mode" value={tweaks.theme} options={[{label:'dark',value:'dark'},{label:'light',value:'light'}]} onChange={v => setTweak('theme', v)} />
+        </TweakSection>
+        <TweakSection title="accent color">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {ACCENT_OPTIONS.map(a => (
+              <button key={a.v}
+                onClick={() => setTweak('accent', a.v)}
+                title={a.n}
+                style={{
+                  height: 36, background: a.v, border: tweaks.accent === a.v ? '2px solid #fff' : '2px solid transparent',
+                  cursor: 'pointer', padding: 0, font: '400 10px/1 var(--vg-font)', color: '#fff',
+                  textTransform: 'lowercase'
+                }}>
+                {a.n}
+              </button>
+            ))}
+          </div>
+        </TweakSection>
+        <TweakSection title="meta">
+          <div style={{ font: '400 11px/16px ui-monospace, monospace', color: 'rgba(255,255,255,0.5)' }}>
+            28 screens · 2 themes · wvga + hd<br/>
+            modern/metro design language
+          </div>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

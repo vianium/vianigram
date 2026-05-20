@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{B8C9D0EB-0BBD-4EEF-F004-B8C9DAEBFCAD}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Vianigram.Stickers</RootNamespace>
+    <AssemblyName>Vianigram.Stickers</AssemblyName>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <TargetPlatformIdentifier>WindowsPhoneApp</TargetPlatformIdentifier>
+    <TargetPlatformVersion>8.1</TargetPlatformVersion>
+    <MinimumVisualStudioVersion>12</MinimumVisualStudioVersion>
+    <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM'">
+    <PlatformTarget>ARM</PlatformTarget>
+    <OutputPath>bin\ARM\Release\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE;NETFX_CORE;WINDOWS_PHONE_APP</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Domain\ValueObjects\Unit.cs" />
+    <Compile Include="Domain\ValueObjects\StickerSetId.cs" />
+    <Compile Include="Domain\ValueObjects\StickerId.cs" />
+    <Compile Include="Domain\ValueObjects\StickerEmoji.cs" />
+    <Compile Include="Domain\ValueObjects\StickerCacheKey.cs" />
+    <Compile Include="Domain\Entities\Sticker.cs" />
+    <Compile Include="Domain\Entities\StickerSet.cs" />
+    <Compile Include="Domain\Entities\StickerLibrary.cs" />
+    <Compile Include="Domain\Events\StickerEvents.cs" />
+    <Compile Include="Domain\StickersError.cs" />
+    <Compile Include="Application\UseCases\SyncStickersCommand.cs" />
+    <Compile Include="Application\UseCases\InstallStickerSetCommand.cs" />
+    <Compile Include="Application\UseCases\UninstallStickerSetCommand.cs" />
+    <Compile Include="Application\UseCases\GetStickerSetCommand.cs" />
+    <Compile Include="Application\UseCases\GetRecentStickersCommand.cs" />
+    <Compile Include="Application\UseCases\FavoriteStickerCommand.cs" />
+    <Compile Include="Application\UseCases\SearchStickersCommand.cs" />
+    <Compile Include="Application\Handlers\HandlerEventBridge.cs" />
+    <Compile Include="Application\Handlers\SyncStickersHandler.cs" />
+    <Compile Include="Application\Handlers\InstallStickerSetHandler.cs" />
+    <Compile Include="Application\Handlers\UninstallStickerSetHandler.cs" />
+    <Compile Include="Application\Handlers\GetStickerSetHandler.cs" />
+    <Compile Include="Application\Handlers\GetRecentStickersHandler.cs" />
+    <Compile Include="Application\Handlers\FavoriteStickerHandler.cs" />
+    <Compile Include="Application\Handlers\SearchStickersHandler.cs" />
+    <Compile Include="Application\RpcErrorMapper.cs" />
+    <Compile Include="Application\StickersApplication.cs" />
+    <Compile Include="Ports\Inbound\IStickersApi.cs" />
+    <Compile Include="Ports\Inbound\StickerLibraryChangedEventArgs.cs" />
+    <Compile Include="Ports\Outbound\IStickerRepository.cs" />
+    <Compile Include="Ports\Outbound\IStickerCachePort.cs" />
+    <Compile Include="Ports\Outbound\IMtProtoRpcPort.cs" />
+    <Compile Include="Ports\Outbound\MtProtoRpcError.cs" />
+    <Compile Include="Infrastructure\TlEncoder.cs" />
+    <Compile Include="Infrastructure\TlDecoder.cs" />
+    <Compile Include="Infrastructure\InMemoryStickerRepository.cs" />
+    <Compile Include="Infrastructure\InMemoryStickerCache.cs" />
+    <Compile Include="Composition\StickersCompositionRoot.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.ObjectModel" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vianigram.Kernel\Vianigram.Kernel.csproj">
+      <Project>{9A1B2C3D-0001-4001-8000-000000000001}</Project>
+      <Name>Vianigram.Kernel</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
+    <VisualStudioVersion>12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+</Project>

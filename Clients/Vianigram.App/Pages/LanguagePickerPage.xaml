@@ -1,0 +1,86 @@
+<Page
+    x:Class="Vianigram.App.Pages.LanguagePickerPage"
+    x:Name="RootPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:layout="using:Vianigram.App.Controls.Layout"
+    xmlns:conv="using:Vianigram.App.Converters"
+    mc:Ignorable="d"
+    Background="{ThemeResource VgBgBrush}">
+
+    <Page.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header: VIANIGRAM strap + "language" page title -->
+        <layout:AppHeader x:Name="HeaderControl" Grid.Row="0" />
+
+        <!-- Body: description + tappable list of languages. Wrapped in a
+             ListView so it scrolls comfortably when the catalogue grows
+             beyond the visible viewport. -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Uid="LanguagePickerDescription"
+                       Grid.Row="0"
+                       Style="{StaticResource VgBodyStyle}"
+                       Foreground="{ThemeResource VgFg2Brush}"
+                       TextWrapping="Wrap"
+                       Margin="24,16,24,16" />
+
+            <ListView Grid.Row="1"
+                      x:Name="LanguagesList"
+                      ItemsSource="{Binding Languages}"
+                      IsItemClickEnabled="True"
+                      ItemClick="OnItemClick"
+                      SelectionMode="None"
+                      Padding="12,0,12,0">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="12,0" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="0,16,0,16"
+                                BorderBrush="{ThemeResource VgDividerBrush}"
+                                BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding NativeName}"
+                                               Style="{StaticResource VgRowTitleStyle}" />
+                                    <TextBlock Text="{Binding EnglishName}"
+                                               Style="{StaticResource VgCaptionStyle}"
+                                               Margin="0,2,0,0" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1"
+                                           Text="✓"
+                                           FontFamily="{StaticResource VgFont}"
+                                           FontSize="20"
+                                           Foreground="{ThemeResource VgAccentBrush}"
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+    </Grid>
+</Page>

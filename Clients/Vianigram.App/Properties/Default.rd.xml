@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Default.rd.xml — runtime directives for the .NET Native compiler (Release).
+  Debug uses CoreCLR and ignores this file. Release on WP8.1 needs all
+  reflectable types (XAML data-binding, ListView ItemTemplate row VMs) marked
+  Required All so the linker keeps them.
+-->
+<Directives xmlns="http://schemas.microsoft.com/netfx/2013/01/metadata">
+  <Application>
+    <Assembly Name="Vianigram.App" Dynamic="Required All" />
+    <Assembly Name="Vianigram.Composition" Dynamic="Required All" />
+    <Assembly Name="Vianigram.Account" Dynamic="Required All" />
+    <Assembly Name="Vianigram.Chats" Dynamic="Required All" />
+    <Assembly Name="Vianigram.Messages" Dynamic="Required All" />
+    <Assembly Name="Vianigram.Storage" Dynamic="Required All" />
+  </Application>
+</Directives>

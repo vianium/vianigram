@@ -1,0 +1,350 @@
+<Page
+    x:Class="Vianigram.App.Pages.Calls.CallPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Vianigram.App.Controls"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:CallPageViewModel, IsDesignTimeCreatable=True}">
+
+    <Page.Resources>
+        <!-- Circular action button (mute / speaker / flip / end).
+             Explicit Min/Max Width/Height + alignment forces
+             WP8.1 to render exactly 64×64 even inside a StackPanel that
+             might otherwise stretch. Default Button template's outer
+             Border is fully replaced. The ContentPresenter renders the
+             child TextBlock (icon glyph) centered over the Ellipse. -->
+        <Style x:Key="VgCallActionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="64" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="MinWidth" Value="64" />
+            <Setter Property="MinHeight" Value="64" />
+            <Setter Property="MaxWidth" Value="64" />
+            <Setter Property="MaxHeight" Value="64" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="#33FFFFFF" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Background="Transparent"
+                              Width="64"
+                              Height="64">
+                            <Ellipse x:Name="CircleFill"
+                                     Width="64"
+                                     Height="64"
+                                     Fill="{TemplateBinding Background}"
+                                     Stroke="Transparent"
+                                     StrokeThickness="0" />
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Content="{TemplateBinding Content}" />
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver" />
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CircleFill"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.7" Duration="0:0:0.05" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CircleFill"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.3" Duration="0" />
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Active-state variant (mute on, speaker on). White background
+             with dark icon — Telegram-style "this control is engaged"
+             feedback. Same dimensions as the base. -->
+        <Style x:Key="VgCallActionButtonActiveStyle" TargetType="Button"
+               BasedOn="{StaticResource VgCallActionButtonStyle}">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#0E5A8A" />
+        </Style>
+
+        <!-- Larger end-call variant (red, slightly bigger). Inherits the
+             circular template + visual states from the base. -->
+        <Style x:Key="VgCallEndButtonStyle" TargetType="Button"
+               BasedOn="{StaticResource VgCallActionButtonStyle}">
+            <Setter Property="Width" Value="76" />
+            <Setter Property="Height" Value="76" />
+            <Setter Property="MinWidth" Value="76" />
+            <Setter Property="MinHeight" Value="76" />
+            <Setter Property="MaxWidth" Value="76" />
+            <Setter Property="MaxHeight" Value="76" />
+            <Setter Property="Background" Value="#E74C3C" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Background="Transparent"
+                              Width="76"
+                              Height="76">
+                            <Ellipse x:Name="CircleFill"
+                                     Width="76"
+                                     Height="76"
+                                     Fill="{TemplateBinding Background}"
+                                     Stroke="Transparent"
+                                     StrokeThickness="0" />
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Content="{TemplateBinding Content}" />
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver" />
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CircleFill"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.7" Duration="0:0:0.05" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="CircleFill"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.3" Duration="0" />
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Page.Resources>
+
+    <!-- Full-bleed accent gradient (top brighter, bottom darker). The
+         background owns the brand colour; everything inside is white /
+         translucent so it works on either light or dark themes without
+         needing per-theme dictionaries. -->
+    <Grid>
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                <GradientStop Color="#1BA1E2" Offset="0" />
+                <GradientStop Color="#0E5A8A" Offset="1" />
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Top strap: "VIANIGRAM AUDIO CALL" / "VIANIGRAM VIDEO CALL".
+             Tracking 180 to match the wordmark style used everywhere else. -->
+        <TextBlock Grid.Row="0"
+                   Text="{Binding CallTypeHeader, Mode=OneWay}"
+                   FontFamily="{StaticResource VgFont}"
+                   FontSize="11"
+                   FontWeight="SemiBold"
+                   CharacterSpacing="180"
+                   Foreground="#B3FFFFFF"
+                   HorizontalAlignment="Center"
+                   Margin="0,40,0,0" />
+
+        <!-- Centre stack: avatar + peer name + duration / status. -->
+        <StackPanel Grid.Row="1"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center">
+
+            <controls:AvatarCircle AvatarSize="180"
+                                   Initials="{Binding AvatarLetter, Mode=OneWay}"
+                                   ColorSeed="{Binding AvatarColorSeed, Mode=OneWay}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,28" />
+
+            <TextBlock Text="{Binding PeerName, Mode=OneWay}"
+                       FontFamily="{StaticResource VgFont}"
+                       FontSize="32"
+                       FontWeight="Light"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       Margin="0,0,0,10" />
+
+            <!-- Status (pre-connect) and duration (connected) share the
+                 same visual slot — Visibility flips when IsConnected
+                 changes. The Visibility binding goes through the
+                 BoolToVisibility converter from Components.xaml. -->
+            <TextBlock Text="{Binding StatusText, Mode=OneWay}"
+                       FontFamily="{StaticResource VgFont}"
+                       FontSize="14"
+                       Foreground="#CCFFFFFF"
+                       HorizontalAlignment="Center"
+                       Visibility="{Binding ShowStatus, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+
+            <TextBlock Text="{Binding DurationText, Mode=OneWay}"
+                       FontFamily="{StaticResource VgFont}"
+                       FontSize="14"
+                       Foreground="#CCFFFFFF"
+                       HorizontalAlignment="Center"
+                       Visibility="{Binding ShowDuration, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+
+            <!-- Inline error (rare; e.g. media plane failed). -->
+            <TextBlock Text="{Binding ErrorMessage, Mode=OneWay}"
+                       FontFamily="{StaticResource VgFont}"
+                       FontSize="12"
+                       Foreground="#FFFFD7CD"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="280"
+                       Margin="0,12,0,0"
+                       Visibility="{Binding HasError, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+
+        <!-- Action row — three primary actions for audio (mute / end /
+             speaker) plus an optional Flip Camera that only renders for
+             video calls. Spacing is uniform, the End button sits in the
+             centre and is slightly larger for clarity. -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,52">
+
+            <!-- Mute toggle. Two stacked icons swap visibility based on
+                 IsMuted; one shows the unmuted-state mic glyph, the other
+                 shows the slashed-mic. The Background of the button itself
+                 stays #33FFFFFF when not muted; an extra inner Ellipse
+                 overlay gives a "filled white" feel when active.
+                 The state change makes it visible that mute is engaged. -->
+            <Button Style="{StaticResource VgCallActionButtonStyle}"
+                    Margin="0,0,18,0"
+                    Command="{Binding ToggleMuteCommand}"
+                    AutomationProperties.Name="{Binding MuteButtonLabel, Mode=OneWay}">
+                <Grid Width="64" Height="64">
+                    <!-- Active background overlay (white circle) when muted. -->
+                    <Ellipse Width="64"
+                             Height="64"
+                             Fill="White"
+                             Visibility="{Binding IsMuted, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- Mic-on icon (when not muted). -->
+                    <TextBlock Text="&#xE1D6;"
+                               FontFamily="Segoe UI Symbol"
+                               FontSize="26"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IsNotMuted, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- Mic-muted icon (when muted, dark on white). -->
+                    <TextBlock Text="&#xE1F6;"
+                               FontFamily="Segoe UI Symbol"
+                               FontSize="26"
+                               Foreground="#0E5A8A"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IsMuted, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
+            </Button>
+
+            <!-- End call (red, bigger). Tap → ICallsApi.DiscardAsync,
+                 then INavigationService.GoBack. -->
+            <Button Style="{StaticResource VgCallEndButtonStyle}"
+                    Margin="0,0,18,0"
+                    Command="{Binding HangUpCommand}"
+                    AutomationProperties.Name="End call">
+                <TextBlock Text="&#xE137;"
+                           FontFamily="Segoe UI Symbol"
+                           FontSize="28"
+                           Foreground="White" />
+            </Button>
+
+            <!-- Speaker toggle. Same active-state pattern as Mute:
+                 white background + dark icon when speakerphone is on. -->
+            <Button Style="{StaticResource VgCallActionButtonStyle}"
+                    Command="{Binding ToggleSpeakerCommand}"
+                    AutomationProperties.Name="{Binding SpeakerButtonLabel, Mode=OneWay}">
+                <Grid Width="64" Height="64">
+                    <Ellipse Width="64"
+                             Height="64"
+                             Fill="White"
+                             Visibility="{Binding IsSpeakerOn, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- Speaker icon (white on translucent when off). -->
+                    <TextBlock Text="&#xE15D;"
+                               FontFamily="Segoe UI Symbol"
+                               FontSize="26"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IsSpeakerOff, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- Speaker icon (dark on white when on). -->
+                    <TextBlock Text="&#xE15D;"
+                               FontFamily="Segoe UI Symbol"
+                               FontSize="26"
+                               Foreground="#0E5A8A"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IsSpeakerOn, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
+            </Button>
+
+            <!-- Flip camera — video only. Hidden for audio calls so the
+                 row stays balanced (3 buttons centred). -->
+            <Button Style="{StaticResource VgCallActionButtonStyle}"
+                    Margin="18,0,0,0"
+                    Command="{Binding FlipCameraCommand}"
+                    Visibility="{Binding ShowFlipCamera, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                    AutomationProperties.Name="Flip camera">
+                <TextBlock Text="&#xE124;"
+                           FontFamily="Segoe UI Symbol"
+                           FontSize="24"
+                           Foreground="White" />
+            </Button>
+        </StackPanel>
+
+        <!-- Protocol-warning banner — only visible after a call fails, sits
+             beneath the mute/end/speaker row so it does not hide the active
+             controls during the call. Shown when the native VoIP engine
+             reported a tgcalls 2.x interop failure (or any other generic
+             failure detail). -->
+        <!-- Diagnostic banner. Lessons learned (live device tests):
+             - "SystemControlForegroundAltMediumBrush" is UWP/Win10 only — XamlParseException on WP8.1
+             - "PhoneSubtleBrush" doesn't exist either — same exception
+             Solution: omit Foreground entirely so it inherits the page's default
+             text color, and rely on Opacity 0.7 to visually mute the line. -->
+        <TextBlock Grid.Row="3"
+                   x:Name="DiagnosticBanner"
+                   Text="{Binding ProtocolWarning}"
+                   Visibility="{Binding HasProtocolWarning, Converter={StaticResource BoolToVisibility}}"
+                   FontSize="14"
+                   TextWrapping="Wrap"
+                   Margin="24,16,24,16"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   Opacity="0.7" />
+
+        <MediaElement x:Name="RemoteAudioPlayer"
+                      AutoPlay="False"
+                      Volume="1"
+                      AudioCategory="Communications"
+                      Visibility="Collapsed"
+                      MediaEnded="RemoteAudioPlayer_MediaEnded"
+                      MediaFailed="RemoteAudioPlayer_MediaFailed" />
+    </Grid>
+</Page>

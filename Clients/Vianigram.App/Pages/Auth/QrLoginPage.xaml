@@ -1,0 +1,169 @@
+<Page
+    x:Class="Vianigram.App.Pages.Auth.QrLoginPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Vianigram.App.Controls"
+    xmlns:layout="using:Vianigram.App.Controls.Layout"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:QrLoginPageViewModel, IsDesignTimeCreatable=True}"
+    Background="{ThemeResource VgBgBrush}">
+
+    <Page.Resources>
+        <Style x:Key="QrLinkButtonStyle" TargetType="Button">
+            <Setter Property="FontFamily" Value="{StaticResource VgFont}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{ThemeResource VgAccentBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="Root" Background="Transparent">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver" />
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Root"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.55"
+                                                             Duration="0:0:0.08" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Root"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.35"
+                                                             Duration="0" />
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Page-level fade-in when a fresh QR token is rendered. The
+             VM doesn't know about XAML; the code-behind triggers
+             QrFadeIn whenever QrText changes. -->
+        <Storyboard x:Name="QrFadeIn">
+            <DoubleAnimation Storyboard.TargetName="QrFadeRoot"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0.0" To="1.0"
+                             Duration="0:0:0.25" />
+        </Storyboard>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <layout:AppHeader x:Name="HeaderControl" Grid.Row="0" />
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollMode="Disabled">
+            <StackPanel Margin="24,18,24,0"
+                        MaxWidth="500"
+                        HorizontalAlignment="Stretch">
+
+                <TextBlock x:Uid="QrLoginDescription"
+                           Text="Open Vianigram on another device. Go to Settings -&gt; Devices -&gt; Link Device."
+                           Style="{StaticResource VgBodyStyle}"
+                           Foreground="{ThemeResource VgFg2Brush}"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="18,0,18,24" />
+
+                <Grid x:Name="QrFadeRoot"
+                      Width="242"
+                      Height="242"
+                      HorizontalAlignment="Center"
+                      Margin="0,0,0,20">
+                    <Border Background="#FFFFFFFF"
+                            BorderBrush="{ThemeResource VgDividerBrush}"
+                            BorderThickness="1" />
+
+                    <controls:QrCodeCanvas Text="{Binding QrText, Mode=OneWay}"
+                                           QuietZoneModules="4"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch">
+                        <controls:QrCodeCanvas.ModuleBrush>
+                            <SolidColorBrush Color="#FF000000" />
+                        </controls:QrCodeCanvas.ModuleBrush>
+                        <controls:QrCodeCanvas.LightBrush>
+                            <SolidColorBrush Color="#FFFFFFFF" />
+                        </controls:QrCodeCanvas.LightBrush>
+                    </controls:QrCodeCanvas>
+
+                    <ProgressRing IsActive="{Binding IsBusy, Mode=OneWay}"
+                                  Width="42"
+                                  Height="42"
+                                  Foreground="{ThemeResource VgAccentBrush}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+                </Grid>
+
+                <!-- Status: countdown text "Waiting for scan… 23s." while
+                     pending; flips to error / 2FA / accepted strings when
+                     state changes. -->
+                <TextBlock Text="{Binding StatusText, Mode=OneWay}"
+                           Style="{StaticResource VgCaptionStyle}"
+                           Foreground="{ThemeResource VgFg2Brush}"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="18,0,18,8" />
+
+                <layout:ProgressDots IsActive="{Binding IsBusy, Mode=OneWay}"
+                                     Margin="0,0,0,16" />
+
+                <Button x:Uid="QrLoginRefreshButton"
+                        Content="refresh qr"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource QrLinkButtonStyle}"
+                        FontSize="13"
+                        HorizontalAlignment="Center"
+                        Margin="0,4,0,0" />
+
+                <!-- Retry button: only visible after RetryStreakLimit
+                     consecutive failures. The link-style button stays
+                     subtle in the layout when hidden. -->
+                <Button x:Uid="QrLoginRetryButton"
+                        Content="retry"
+                        Command="{Binding RetryCommand}"
+                        Style="{StaticResource QrLinkButtonStyle}"
+                        FontSize="13"
+                        HorizontalAlignment="Center"
+                        Margin="0,2,0,0"
+                        Visibility="{Binding ShowRetry, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button x:Uid="QrLoginUsePhoneButton"
+                Grid.Row="2"
+                Content="use phone number"
+                Command="{Binding UsePhoneCommand}"
+                Style="{StaticResource QrLinkButtonStyle}"
+                HorizontalAlignment="Center"
+                Margin="0,8,0,18" />
+    </Grid>
+</Page>

@@ -1,0 +1,131 @@
+<Page
+    x:Class="Vianigram.App.Pages.Settings.ActiveSessionsPage"
+    x:Name="PageRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Vianigram.App.ViewModels.Pages"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=vm:ActiveSessionsPageViewModel, IsDesignTimeCreatable=True}"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0"
+                   Text="Active Sessions"
+                   FontSize="28"
+                   FontWeight="SemiBold"
+                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                   Margin="20,12,20,8" />
+
+        <!-- Current session header (read-only) -->
+        <Grid Grid.Row="1" Margin="16,8,16,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0"
+                       Text="THIS DEVICE"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{ThemeResource SystemControlForegroundAccentBrush}"
+                       Margin="0,0,0,4" />
+
+            <Border Grid.Row="1"
+                    Background="{ThemeResource SystemControlBackgroundChromeMediumLowBrush}"
+                    Padding="12,10">
+                <StackPanel>
+                    <TextBlock Text="{Binding CurrentSession.DeviceName, Mode=OneWay}"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{ThemeResource ApplicationForegroundThemeBrush}" />
+                    <TextBlock Text="{Binding CurrentSession.AppVersion, Mode=OneWay}"
+                               FontSize="13"
+                               Opacity="0.7"
+                               Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding CurrentSession.IpAndLocation, Mode=OneWay}"
+                               FontSize="12"
+                               Opacity="0.6"
+                               Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding CurrentSession.LastActiveText, Mode=OneWay}"
+                               FontSize="12"
+                               Foreground="{ThemeResource SystemControlForegroundAccentBrush}"
+                               Margin="0,2,0,0" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Terminate-all button -->
+        <Button Grid.Row="2"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Left"
+                Margin="16,0,16,8"
+                Padding="12,10"
+                Background="Transparent"
+                BorderThickness="0"
+                Foreground="#FFFF5252"
+                Content="Terminate all other sessions"
+                Command="{Binding TerminateAllCommand}" />
+
+        <!-- Other sessions list -->
+        <ListView Grid.Row="3"
+                  ItemsSource="{Binding OtherSessions}"
+                  SelectionMode="None"
+                  IsItemClickEnabled="False">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="16,8,16,8" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid MinHeight="72">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding DeviceName}"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding AppVersion}"
+                                       FontSize="13"
+                                       Opacity="0.7"
+                                       Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding IpAndLocation}"
+                                       FontSize="12"
+                                       Opacity="0.6"
+                                       Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding LastActiveText}"
+                                       FontSize="12"
+                                       Opacity="0.6"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="Terminate"
+                                Foreground="#FFFF5252"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                VerticalAlignment="Center"
+                                CommandParameter="{Binding}"
+                                Command="{Binding DataContext.TerminateCommand,
+                                                  ElementName=PageRoot}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>
