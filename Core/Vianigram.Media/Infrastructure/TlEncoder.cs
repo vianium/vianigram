@@ -46,8 +46,8 @@ namespace Vianigram.Media.Infrastructure
         public const uint CtorInputPeerEmpty = 0x7f3b18eau;
         public const uint CtorInputPeerSelf = 0x7da07ec9u;
         public const uint CtorInputPeerChat = 0x35a95cb9u;
-        public const uint CtorInputPeerUser = 0x7b8e7de6u;
-        public const uint CtorInputPeerChannel = 0x20adaef8u;
+        public const uint CtorInputPeerUser = 0xdde8a54cu;
+        public const uint CtorInputPeerChannel = 0x27bcbbfcu;
 
         // ---------- Downloads ----------
 
@@ -162,7 +162,7 @@ namespace Vianigram.Media.Infrastructure
             switch (kind)
             {
                 case PeerPhotoKind.User:
-                    // inputPeerUser#7b8e7de6 user_id:long access_hash:long
+                    // inputPeerUser#dde8a54c user_id:long access_hash:long
                     w.Write(CtorInputPeerUser);
                     w.Write(peerId);
                     w.Write(peerAccessHash);
@@ -173,7 +173,7 @@ namespace Vianigram.Media.Infrastructure
                     w.Write(peerId);
                     break;
                 case PeerPhotoKind.Channel:
-                    // inputPeerChannel#20adaef8 channel_id:long access_hash:long
+                    // inputPeerChannel#27bcbbfc channel_id:long access_hash:long
                     w.Write(CtorInputPeerChannel);
                     w.Write(peerId);
                     w.Write(peerAccessHash);

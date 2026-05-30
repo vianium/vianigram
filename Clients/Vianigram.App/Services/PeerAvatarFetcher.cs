@@ -33,6 +33,7 @@ using Vianigram.Media.Domain;
 using Vianigram.Media.Domain.ValueObjects;
 using Vianigram.Media.Ports.Inbound;
 using Vianigram.Media.Ports.Outbound;
+using Vianigram.Storage.Ports.Stubs;
 using Windows.Storage.Streams;
 using Windows.UI.Xaml.Media.Imaging;
 
@@ -43,6 +44,12 @@ namespace Vianigram.App.Services
         private readonly IMediaApi _media;
         private readonly IMediaCache _cache;
         private readonly IComponentLogger _log;
+        // Persistent disk cache of avatar JPEG bytes (SQLite-backed,
+        // keyed by photo_id). Null when Storage booted in JSON-only
+        // fallback mode or when composition skipped the registration —
+        // the fetcher then degrades to the pre-existing network path
+        // without behavioural change.
+        private readonly IAvatarCacheStore _diskCache;
 
         // Memoised completed BitmapImages — one per photo_id. The inner
         // ImageSource is GC-rooted by every DialogRow that binds to it,
@@ -60,12 +67,22 @@ namespace Vianigram.App.Services
         private readonly object _gate = new object();
 
         public PeerAvatarFetcher(IMediaApi media, IMediaCache cache, IComponentLogger log)
+            : this(media, cache, log, null)
+        {
+        }
+
+        public PeerAvatarFetcher(
+            IMediaApi media,
+            IMediaCache cache,
+            IComponentLogger log,
+            IAvatarCacheStore diskCache)
         {
             if (media == null) throw new ArgumentNullException("media");
             if (cache == null) throw new ArgumentNullException("cache");
             _media = media;
             _cache = cache;
             _log = log; // null-tolerant
+            _diskCache = diskCache; // null-tolerant
         }
 
         /// <summary>
@@ -111,22 +128,55 @@ namespace Vianigram.App.Services
             CancellationToken ct)
         {
             BitmapImage produced = null;
+            // Tracks where the bytes came from for the success log. Avoids
+            // double-saving to disk when the disk cache itself supplied
+            // the payload.
+            bool fromDiskCache = false;
             try
             {
                 if (_log != null) _log.Info(
                     "avatar.fetch begin peer=" + peerKind + ":" + peerId +
                     " photoId=" + photoId + " dc=" + dcId);
 
+                // Disk fast-path: a previous launch persisted the JPEG
+                // bytes in the SQLite avatar_cache table. A small (6-13 KB)
+                // BLOB read is <5 ms and avoids the 150-300 ms upload.getFile
+                // RPC entirely. Best-effort: any error returns null and we
+                // fall through to the network path.
+                byte[] bytes = null;
+                if (_diskCache != null)
+                {
+                    try
+                    {
+                        bytes = await _diskCache.TryLoadAsync(photoId, ct).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        bytes = null;
+                    }
+                    if (bytes != null && bytes.Length > 0)
+                    {
+                        fromDiskCache = true;
+                        if (_log != null) _log.Info(
+                            "avatar.fetch disk-hit peer=" + peerKind + ":" + peerId +
+                            " photoId=" + photoId + " bytes=" + bytes.Length);
+                    }
+                }
+
                 FileLocation location = FileLocation.PeerPhoto(
                     dcId, peerKind, peerId, peerAccessHash, photoId, big: false);
 
-                // Cache fast-path: if a previous run already wrote bytes
-                // for this location, just decode them.
+                // Process-local media cache fast-path: a previous fetch
+                // in this session already pushed bytes into IMediaCache.
+                // Only consult it if the disk lookup missed.
                 MediaCacheEntry hit = null;
-                try { hit = await _cache.TryGetAsync(location, ct).ConfigureAwait(false); }
-                catch { /* cache miss / unavailable — fall through */ }
+                if (bytes == null || bytes.Length == 0)
+                {
+                    try { hit = await _cache.TryGetAsync(location, ct).ConfigureAwait(false); }
+                    catch { /* cache miss / unavailable — fall through */ }
+                    bytes = hit != null ? hit.Payload : null;
+                }
 
-                byte[] bytes = hit != null ? hit.Payload : null;
                 if (bytes == null || bytes.Length == 0)
                 {
                     // Pass totalSize=0 and let StartDownloadHandler's
@@ -164,13 +214,48 @@ namespace Vianigram.App.Services
                     return null;
                 }
 
+                // Persist the network-sourced bytes to the SQLite cache so
+                // the next launch (and any later session this process spans)
+                // can short-circuit the upload.getFile RPC. Skip when the
+                // bytes themselves came from the disk cache. Fire-and-await
+                // here is safe — SaveAsync swallows its own errors, returns
+                // quickly (<5 ms for a 6-13 KB BLOB), and serialises against
+                // the shared SqliteDatabase.Gate so the cold-start fan-out
+                // of ~16 concurrent fetches stays consistent.
+                if (!fromDiskCache && _diskCache != null)
+                {
+                    try
+                    {
+                        // Magic-byte sniff: PNG starts with 89 50 4E 47,
+                        // everything else we serve here is JPEG. Most
+                        // small profile photos are JPEG; recording the
+                        // actual format keeps the decoder honest if we
+                        // ever start emitting WebP / PNG variants.
+                        string fmt = "jpeg";
+                        if (bytes.Length >= 4 &&
+                            bytes[0] == 0x89 && bytes[1] == 0x50 &&
+                            bytes[2] == 0x4E && bytes[3] == 0x47)
+                        {
+                            fmt = "png";
+                        }
+                        await _diskCache.SaveAsync(photoId, dcId, bytes, fmt, ct).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Best-effort — the avatar already paints from the
+                        // in-memory path; persistence failure just means a
+                        // future launch will re-fetch.
+                    }
+                }
+
                 // Decode on the UI thread — BitmapImage has UI affinity.
                 BitmapImage bmp = null;
                 byte[] payload = bytes;
-                await Dispatch.OnUiAsync(async () =>
+                Func<Task> decodeOnUi = async delegate
                 {
                     bmp = await DecodeOnUiThreadAsync(payload).ConfigureAwait(true);
-                }).ConfigureAwait(false);
+                };
+                await Dispatch.OnUiTaskAsync(decodeOnUi).ConfigureAwait(false);
 
                 produced = bmp;
                 if (_log != null)

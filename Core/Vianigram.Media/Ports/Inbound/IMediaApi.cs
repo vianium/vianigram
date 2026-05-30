@@ -44,6 +44,15 @@ namespace Vianigram.Media.Ports.Inbound
         Task<Result<MediaTransfer, MediaError>> DownloadAsync(FileLocation location, FileType type, long totalSize, CancellationToken ct);
 
         /// <summary>
+        /// Read one Telegram media range without assembling or caching the
+        /// whole file. This is the low-level primitive used by progressive
+        /// audio/video buffering: callers write the returned bytes to a local
+        /// temp file, start playback after an initial buffer, then keep asking
+        /// for later ranges in the background.
+        /// </summary>
+        Task<Result<byte[], MediaError>> DownloadRangeAsync(FileLocation location, long offset, int limit, CancellationToken ct);
+
+        /// <summary>
         /// Optimistic upload. Returns within a few milliseconds with a stub
         /// <see cref="UploadedFile"/> whose <c>FileId</c> is the
         /// client-generated random int64; the chunk fan-out runs on a

@@ -112,7 +112,9 @@ namespace Vianigram.Media.Domain.ValueObjects
             {
                 case FileLocationKind.Document:
                 case FileLocationKind.Photo:
-                    return Id == other.Id && AccessHash == other.AccessHash;
+                    return Id == other.Id
+                        && AccessHash == other.AccessHash
+                        && string.Equals(ThumbSize, other.ThumbSize, System.StringComparison.Ordinal);
                 case FileLocationKind.Legacy:
                     return VolumeId == other.VolumeId && LocalId == other.LocalId && Secret == other.Secret;
                 case FileLocationKind.PeerPhoto:
@@ -140,6 +142,7 @@ namespace Vianigram.Media.Domain.ValueObjects
                 h = (h * 397) ^ (int)(AccessHash ^ (AccessHash >> 32));
                 h = (h * 397) ^ (int)(VolumeId ^ (VolumeId >> 32));
                 h = (h * 397) ^ LocalId;
+                h = (h * 397) ^ (ThumbSize == null ? 0 : ThumbSize.GetHashCode());
                 return h;
             }
         }

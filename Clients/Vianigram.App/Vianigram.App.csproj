@@ -18,7 +18,7 @@
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
     <AppxBundlePlatforms>arm</AppxBundlePlatforms>
-    <AppxBundle>Auto</AppxBundle>
+    <AppxBundle>Never</AppxBundle>
   </PropertyGroup>
   <!-- AnyCPU is provided so the Visual Studio designer / IntelliSense load
        correctly; deployable bits always come from x86 or ARM. -->
@@ -42,6 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <PlatformTarget>x86</PlatformTarget>
     <OutputPath>bin\x86\Debug\</OutputPath>
+    <AppxBundle>Never</AppxBundle>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -232,8 +233,10 @@
     </Compile>
     <!-- Shared converters (BoolToVisibilityConverter etc) -->
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
+    <Compile Include="Converters\ImagePathToImageSourceConverter.cs" />
     <Compile Include="Converters\StringNotEmptyToVisibilityConverter.cs" />
     <Compile Include="Controls\Bubbles\MessageBubbleTemplateSelector.cs" />
+    <Compile Include="Helpers\AvatarPlaceholder.cs" />
     <Compile Include="Helpers\QrCodeGenerator.cs" />
     <Compile Include="Services\AppLog.cs" />
     <Compile Include="Services\AppServices.cs" />
@@ -244,7 +247,11 @@
     <Compile Include="Services\StrippedThumbExpander.cs" />
     <Compile Include="Services\LocalizedText.cs" />
     <Compile Include="Services\PeerAvatarFetcher.cs" />
+    <Compile Include="Services\DialogListSnapshotStore.cs" />
+    <Compile Include="Services\AvatarResolver.cs" />
     <Compile Include="Services\MessageThumbnailFetcher.cs" />
+    <Compile Include="Services\DocumentFileFetcher.cs" />
+    <Compile Include="Services\ProgressiveMediaFileFetcher.cs" />
     <Compile Include="Services\MutedPeersStore.cs" />
     <Compile Include="Services\LiveTileService.cs" />
     <Compile Include="Services\BackgroundCoordination.cs" />
@@ -783,4 +790,24 @@
     <VisualStudioVersion>14.0</VisualStudioVersion>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+  <PropertyGroup>
+    <CopyLocalFilesOutputGroupDependsOn>
+      $(CopyLocalFilesOutputGroupDependsOn);
+      VianigramRemoveDuplicateNativePdbCopyLocal
+    </CopyLocalFilesOutputGroupDependsOn>
+  </PropertyGroup>
+  <Target Name="VianigramRemoveDuplicateNativePdbCopyLocal">
+    <ItemGroup>
+      <!-- Native project-reference PDBs also enter the package from their VC output
+           folders. Drop only the app copy-local PDB entries to avoid APPX1101. -->
+      <_VianigramDuplicateNativeAppBinPdb Include="@(ReferenceCopyLocalPaths)"
+                                          Condition="'%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Vianium.Crypto.pdb'
+                                                     or '%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Vianigram.Tl.pdb'
+                                                     or '%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Vianigram.MTProto.pdb'
+                                                     or '%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Vianium.Tls.pdb'
+                                                     or '%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Vianium.MtProxy.pdb'
+                                                     or '%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Vianium.VoIP.pdb'" />
+      <ReferenceCopyLocalPaths Remove="@(_VianigramDuplicateNativeAppBinPdb)" />
+    </ItemGroup>
+  </Target>
 </Project>

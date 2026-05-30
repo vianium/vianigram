@@ -62,6 +62,8 @@ namespace Vianigram.Account.Application.Handlers
             LogoutCommand command,
             CancellationToken ct)
         {
+            int dcIdToDelete = GetCurrentDcId();
+
             byte[] request = new byte[4];
             request[0] = (byte)(AuthLogOut & 0xff);
             request[1] = (byte)((AuthLogOut >> 8) & 0xff);
@@ -83,7 +85,7 @@ namespace Vianigram.Account.Application.Handlers
 
             try
             {
-                await _authKeyStore.DeleteAsync(GetCurrentDcId(), ct).ConfigureAwait(false);
+                await _authKeyStore.DeleteAsync(dcIdToDelete, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

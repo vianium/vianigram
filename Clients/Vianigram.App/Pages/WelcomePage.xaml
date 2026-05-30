@@ -200,25 +200,34 @@
                             Command="{Binding ContinueCommand}"
                             Margin="0,28,0,0" />
 
-                    <!-- Secondary row: scan qr | english ▾ -->
+                    <!-- Secondary row: proxy | scan qr | english -->
                     <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Button x:Uid="WelcomeScanQr"
+                        <Button x:Uid="WelcomeProxy"
                                 Grid.Column="0"
                                 Style="{StaticResource VgButtonStyle}"
                                 BorderBrush="{ThemeResource VgFg3Brush}"
                                 Foreground="{ThemeResource VgFg2Brush}"
-                                Command="{Binding ScanQrCommand}" />
+                                Command="{Binding ProxyCommand}"
+                                Margin="0,0,6,0" />
+                        <Button x:Uid="WelcomeScanQr"
+                                Grid.Column="1"
+                                Style="{StaticResource VgButtonStyle}"
+                                BorderBrush="{ThemeResource VgFg3Brush}"
+                                Foreground="{ThemeResource VgFg2Brush}"
+                                Command="{Binding ScanQrCommand}"
+                                Margin="6,0,6,0" />
                         <Button x:Uid="WelcomeLanguage"
                                 Grid.Column="2"
                                 Style="{StaticResource VgButtonStyle}"
                                 BorderBrush="{ThemeResource VgFg3Brush}"
                                 Foreground="{ThemeResource VgFg2Brush}"
-                                Command="{Binding LanguageCommand}" />
+                                Command="{Binding LanguageCommand}"
+                                Margin="6,0,0,0" />
                     </Grid>
 
                     <!-- Disclaimer -->

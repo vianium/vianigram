@@ -16,6 +16,9 @@
 
     <Page.BottomAppBar>
         <CommandBar DataContext="{Binding DataContext, ElementName=RootPage}">
+            <AppBarButton Label="MTProxy"
+                          Icon="Setting"
+                          Command="{Binding ProxyCommand}" />
             <AppBarButton x:Uid="CommonNextAppBar"
                           Label="next"
                           Icon="Forward"

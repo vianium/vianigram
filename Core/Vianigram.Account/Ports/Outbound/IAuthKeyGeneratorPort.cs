@@ -15,5 +15,6 @@ namespace Vianigram.Account.Ports.Outbound
     public interface IAuthKeyGeneratorPort
     {
         Task<Result<AuthKeyRecord, AccountError>> GenerateAsync(string host, int port, CancellationToken ct);
+        Task<Result<AuthKeyRecord, AccountError>> GenerateForDcAsync(string host, int port, int dcId, CancellationToken ct);
     }
 }

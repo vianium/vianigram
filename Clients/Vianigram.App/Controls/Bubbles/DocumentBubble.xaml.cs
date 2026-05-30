@@ -152,7 +152,15 @@ namespace Vianigram.App.Controls.Bubbles
         public DocumentBubble()
         {
             InitializeComponent();
+            BubbleInteractionHelpers.EnableTextSelection(FileNameText);
+            BubbleInteractionHelpers.EnableTextSelection(FileSizeText);
+            BubbleInteractionHelpers.EnableTextSelection(CaptionText);
             CaptionText.Tapped += CaptionText_Tapped;
+            if (RootGrid != null)
+            {
+                RootGrid.Holding += OnBubbleHolding;
+                RootGrid.RightTapped += OnBubbleRightTapped;
+            }
             ApplyText();
             ApplyMime();
             ApplyState();
@@ -337,6 +345,35 @@ namespace Vianigram.App.Controls.Bubbles
             HandleAction();
         }
 
+        private void OnBubbleHolding(object sender, HoldingRoutedEventArgs e)
+        {
+            if (e == null || e.HoldingState != Windows.UI.Input.HoldingState.Started) return;
+            if (BubbleInteractionHelpers.IsFrom(FileNameText, e.OriginalSource) ||
+                BubbleInteractionHelpers.IsFrom(FileSizeText, e.OriginalSource) ||
+                BubbleInteractionHelpers.IsFrom(CaptionText, e.OriginalSource))
+                return;
+
+            ShowCopyMenu();
+            e.Handled = true;
+        }
+
+        private void OnBubbleRightTapped(object sender, RightTappedRoutedEventArgs e)
+        {
+            ShowCopyMenu();
+            if (e != null) e.Handled = true;
+        }
+
+        private void ShowCopyMenu()
+        {
+            string text = !string.IsNullOrWhiteSpace(Caption) ? Caption : FileName;
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            BubbleInteractionHelpers.ShowCopyTextFlyout(
+                BubbleBorder != null ? (FrameworkElement)BubbleBorder : this,
+                text,
+                !string.IsNullOrWhiteSpace(Caption) ? "Copy caption" : "Copy file name");
+        }
+
         private void HandleAction()
         {
             if (IsDownloading)
@@ -378,7 +415,11 @@ namespace Vianigram.App.Controls.Bubbles
             try
             {
                 StorageFile file = await StorageFile.GetFileFromPathAsync(FilePath);
-                if (file != null) await Launcher.LaunchFileAsync(file);
+                if (file != null)
+                {
+                    bool launched = await Launcher.LaunchFileAsync(file);
+                    if (!launched) SetFailed();
+                }
             }
             catch
             {

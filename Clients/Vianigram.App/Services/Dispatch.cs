@@ -58,6 +58,45 @@ namespace Vianigram.App.Services
             return LegacyOnUiAsync(action);
         }
 
+        /// <summary>
+        /// Run asynchronous work on the UI dispatcher and wait for the
+        /// asynchronous portion to finish. Use this for UI-affine APIs
+        /// that return tasks, such as BitmapImage.SetSourceAsync.
+        /// </summary>
+        public static Task OnUiTaskAsync(Func<Task> action)
+        {
+            if (action == null) return CompletedTask;
+
+            var tcs = new TaskCompletionSource<bool>();
+            Action runner = async delegate
+            {
+                try
+                {
+                    await action().ConfigureAwait(true);
+                    tcs.TrySetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            };
+
+            Task dispatchTask = OnUiAsync(runner);
+            dispatchTask.ContinueWith(delegate(Task t)
+            {
+                if (t.IsCanceled)
+                {
+                    tcs.TrySetCanceled();
+                }
+                else if (t.IsFaulted)
+                {
+                    tcs.TrySetException(t.Exception);
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+
+            return tcs.Task;
+        }
+
         // Legacy path — preserved for the "no-one called Register yet"
         // window during cold start. Behaviour identical to the original
         // pre-Task-7 implementation.

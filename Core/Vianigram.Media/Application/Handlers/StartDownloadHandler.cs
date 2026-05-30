@@ -58,6 +58,10 @@ namespace Vianigram.Media.Application.Handlers
     {
         public const int ParallelismDefault = 4;
         public const int MaxRetries = 5;
+        private const int AutodetectParallelism = 2;
+        private const int GetFileAlignmentBytes = 4 * 1024;
+        private const int GetFileMinLimitBytes = ChunkSize.Bytes64K;
+        private const int GetFileMaxLimitBytes = 1024 * 1024;
 
         private readonly IMtProtoRpcPort _rpc;
         private readonly IMediaCache _cache;
@@ -66,6 +70,8 @@ namespace Vianigram.Media.Application.Handlers
         private readonly IClock _clock;
         private readonly IComponentLogger _log;
         private readonly ITelemetry _telemetry;
+        private readonly SemaphoreSlim _autodetectGate =
+            new SemaphoreSlim(AutodetectParallelism, AutodetectParallelism);
 
         public StartDownloadHandler(
             IMtProtoRpcPort rpc,
@@ -129,7 +135,15 @@ namespace Vianigram.Media.Application.Handlers
             // changes that add more peer-photo shapes.
             if (cmd.TotalSize == 0)
             {
-                return await DownloadAutodetectAsync(cmd, ct).ConfigureAwait(false);
+                await _autodetectGate.WaitAsync(ct).ConfigureAwait(false);
+                try
+                {
+                    return await DownloadAutodetectAsync(cmd, ct).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _autodetectGate.Release();
+                }
             }
 
             var id = MediaId.NewId();
@@ -196,6 +210,81 @@ namespace Vianigram.Media.Application.Handlers
             return Result<MediaTransfer, MediaError>.Ok(transfer);
         }
 
+        /// <summary>
+        /// Fetch a single upload.getFile range. Unlike HandleAsync this does
+        /// not allocate a transfer aggregate, assemble chunks, or write to the
+        /// media cache. It is intentionally small and predictable so the app
+        /// layer can build progressive playback buffers without holding large
+        /// videos in managed memory.
+        /// </summary>
+        public async Task<Result<byte[], MediaError>> DownloadRangeAsync(
+            FileLocation location,
+            long offset,
+            int limit,
+            CancellationToken ct)
+        {
+            if (location == null)
+                return Result<byte[], MediaError>.Fail(MediaError.InvalidArgument("location null"));
+            if (offset < 0)
+                return Result<byte[], MediaError>.Fail(MediaError.InvalidArgument("offset negative"));
+            if ((offset % GetFileAlignmentBytes) != 0L)
+                return Result<byte[], MediaError>.Fail(MediaError.InvalidArgument("offset must be 4KB aligned"));
+            if (limit <= 0)
+                return Result<byte[], MediaError>.Fail(MediaError.InvalidArgument("limit must be positive"));
+            if (limit > GetFileMaxLimitBytes)
+                return Result<byte[], MediaError>.Fail(MediaError.ChunkTooLarge("limit exceeds 1 MiB"));
+
+            int attempt = 0;
+            while (true)
+            {
+                try
+                {
+                    int requestLimit = NormalizeGetFileLimit(limit);
+                    byte[] req = TlEncoder.EncodeGetFile(location, offset, requestLimit);
+                    var rpc = await _rpc.CallAsync(req, location.DcId, ct).ConfigureAwait(false);
+                    if (rpc.IsOk)
+                    {
+                        byte[] bytes;
+                        if (!TlDecoder.TryDecodeUploadFile(rpc.Value ?? new byte[0], out bytes))
+                        {
+                            return Result<byte[], MediaError>.Fail(
+                                MediaError.ProtocolError("could not decode upload.file"));
+                        }
+
+                        return Result<byte[], MediaError>.Ok(ClampPayload(bytes, limit));
+                    }
+
+                    var err = rpc.Error;
+                    if (err.Code == MediaErrorCode.FloodWait)
+                    {
+                        _telemetry.Track("media.range.flood_wait_seconds", err.FloodWaitSeconds, "s");
+                        await Task.Delay(TimeSpan.FromSeconds(err.FloodWaitSeconds), ct).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    if (err.Code == MediaErrorCode.NetworkError && attempt < MaxRetries)
+                    {
+                        attempt += 1;
+                        int backoff = 250 * (1 << Math.Min(attempt, 4));
+                        if (backoff > 4000) backoff = 4000;
+                        await Task.Delay(backoff, ct).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    return Result<byte[], MediaError>.Fail(err);
+                }
+                catch (OperationCanceledException)
+                {
+                    return Result<byte[], MediaError>.Fail(MediaError.Cancelled("range cancelled"));
+                }
+                catch (Exception ex)
+                {
+                    _log.Error("Media.DownloadRange: " + ex.Message);
+                    return Result<byte[], MediaError>.Fail(MediaError.NetworkError(ex.Message));
+                }
+            }
+        }
+
         private async Task<MediaError> DownloadChunkAsync(
             MediaTransfer transfer,
             FileLocation location,
@@ -234,9 +323,10 @@ namespace Vianigram.Media.Application.Handlers
                     // an IBuffer so consumers can pass it to FileIO directly
                     // when the on-disk cache lands; today we still copy once
                     // to byte[] for the TL decode.
-                    byte[] req = TlEncoder.EncodeGetFile(location, chunk.Offset, chunk.Size);
+                    int requestLimit = NormalizeGetFileLimit(chunk.Size);
+                    byte[] req = TlEncoder.EncodeGetFile(location, chunk.Offset, requestLimit);
                     IBuffer reqBuffer = CryptographicBuffer.CreateFromByteArray(req);
-                    var rpc = await _rpc.CallBufferAsync(reqBuffer, ct).ConfigureAwait(false);
+                    var rpc = await _rpc.CallBufferAsync(reqBuffer, location.DcId, ct).ConfigureAwait(false);
 
                     if (rpc.IsOk)
                     {
@@ -253,6 +343,7 @@ namespace Vianigram.Media.Application.Handlers
                             return MediaError.ProtocolError("could not decode upload.file");
                         }
 
+                        bytes = ClampPayload(bytes, chunk.Size);
                         chunk.MarkCompleted(bytes);
                         sw.Stop();
                         long rttMs = sw.ElapsedMilliseconds;
@@ -298,7 +389,11 @@ namespace Vianigram.Media.Application.Handlers
 
                     // Terminal failure.
                     chunk.MarkFailed(err.ToString());
-                    _log.Warn("Media.DownloadChunk failed: " + err);
+                    _log.Warn("Media.DownloadChunk failed offset=" +
+                        chunk.Offset.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                        " size=" + chunk.Size.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                        " limit=" + requestLimit.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                        ": " + err);
                     return err;
                 }
             }
@@ -372,7 +467,7 @@ namespace Vianigram.Media.Application.Handlers
                     _log.Info("autodetect.req hex=" + ToHex(req, Math.Min(req.Length, 64)) +
                         " len=" + req.Length);
                 }
-                var rpc = await _rpc.CallAsync(req, ct).ConfigureAwait(false);
+                var rpc = await _rpc.CallAsync(req, cmd.Location.DcId, ct).ConfigureAwait(false);
 
                 if (rpc.IsFail)
                 {
@@ -452,6 +547,28 @@ namespace Vianigram.Media.Application.Handlers
                 sb.Append(bytes[i].ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
             }
             return sb.ToString();
+        }
+
+        private static int NormalizeGetFileLimit(int requested)
+        {
+            if (requested <= 0) return GetFileMinLimitBytes;
+            if (requested <= GetFileMinLimitBytes) return GetFileMinLimitBytes;
+            if (requested >= GetFileMaxLimitBytes) return GetFileMaxLimitBytes;
+
+            int normalized = GetFileMinLimitBytes;
+            while (normalized < requested && normalized < GetFileMaxLimitBytes)
+                normalized *= 2;
+            return normalized > GetFileMaxLimitBytes ? GetFileMaxLimitBytes : normalized;
+        }
+
+        private static byte[] ClampPayload(byte[] bytes, int maxBytes)
+        {
+            if (bytes == null || bytes.Length == 0) return new byte[0];
+            if (maxBytes <= 0 || bytes.Length <= maxBytes) return bytes;
+
+            var clipped = new byte[maxBytes];
+            System.Buffer.BlockCopy(bytes, 0, clipped, 0, maxBytes);
+            return clipped;
         }
 
         private static byte[] AssembleChunks(MediaTransfer transfer)

@@ -14,6 +14,65 @@ external blockers. Expected slippage on the order of 30-50% — recalibrate afte
 
 ---
 
+## Current alpha target — 0.1.2.0
+
+**Status date:** 2026-05-30.
+
+### Goal
+
+Stabilize and package the first practical Windows Phone alpha path as a
+`Release|ARM` APPX for the `v0.1.2.0` tag: sign in, open the chat list
+quickly, read real chats, receive live updates, fetch media on intentional
+user action, and connect through MTProxy before authentication when the
+network requires it.
+
+### In scope
+
+- Package manifest, assembly versions, visible release text, and release
+  notes aligned to `0.1.2.0`.
+- Pre-login MTProxy access from welcome, phone-number, and QR-login flows.
+- Telegram login paths kept active: phone/SMS, 2FA/SRP, and QR token polling.
+- Dialog snapshot loading, avatar resolution, avatar disk cache, and stable
+  generated placeholders for peers without photos.
+- Message thumbnails, document fetch, and progressive audio/video buffering
+  through the media bounded context.
+- Media DC prewarm, imported authorization reuse, persisted DC options, and
+  endpoint health so media fetches avoid repeating expensive bootstrap work.
+- Background sync, live updates, foreground notifications, live tiles, and
+  unread badges remain wired for alpha validation.
+- QR-login compatibility smoke coverage and auth-key reuse policy
+  documentation.
+
+### Known limitations
+
+- Full document and large media downloads must remain user-triggered; only
+  lightweight previews/thumbnails should happen automatically.
+- Closed-app notifications are still limited by the Windows Phone
+  notification platform and can be delayed or unavailable.
+- Calls have MTProto/update plumbing and a fallback poller, but the product
+  UI is not release-complete yet.
+- MTProxy needs real-device validation across direct, secret-based, and
+  restricted-network scenarios before it can be considered fully complete.
+- Secret chats, stickers, search, privacy, and settings still need product
+  hardening beyond the current skeletons and ports.
+
+### Release gates
+
+- `Release|ARM` APPX build succeeds for `Vianigram.sln`.
+- The generated APPX reports package identity version `0.1.2.0`.
+- Latest verification: `MSBuild Vianigram.sln /p:Configuration=Release
+  /p:Platform=ARM /m:1` generated
+  `Vianigram.App_0.1.2.0_ARM.appx` on 2026-05-30.
+- Smoke login with phone/SMS and QR on a physical device.
+- Confirm MTProxy can be configured before sign-in and persists across app
+  restarts.
+- Confirm document/media downloads start only from a direct tap, while
+  thumbnails/previews remain bounded.
+- Confirm chat list cold start can paint from snapshot before network
+  refresh.
+
+---
+
 ## Phase 0 — Foundation
 
 **Tentative timeline:** 1 week.

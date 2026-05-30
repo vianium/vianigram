@@ -9,6 +9,10 @@
     d:DesignWidth="48">
 
     <Grid x:Name="Host" Width="48" Height="48">
+        <!-- Background tier: peer-coloured circle + initials. Always
+             present so the row paints something the instant it
+             enters the visual tree, even before the avatar fetch
+             starts (or when it ultimately fails). -->
         <Ellipse x:Name="BackgroundEllipse"
                  Width="48"
                  Height="48"
@@ -19,5 +23,14 @@
                    FontSize="18"
                    FontWeight="SemiBold"
                    Foreground="White" />
+
+        <!-- Foreground tier: the real avatar bitmap, faded in over the
+             placeholder once it lands. Opacity starts at 0 so the
+             placeholder is fully visible until ApplyVisual stamps a
+             brush and runs the storyboard. -->
+        <Ellipse x:Name="ImageEllipse"
+                 Width="48"
+                 Height="48"
+                 Opacity="0" />
     </Grid>
 </UserControl>

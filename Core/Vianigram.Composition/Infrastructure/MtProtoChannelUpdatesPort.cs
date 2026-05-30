@@ -76,6 +76,12 @@ namespace Vianigram.Composition.Infrastructure
 
         private void OnChannelChanged(Vianigram.MTProto.MtProtoChannel channel)
         {
+            if (channel == null)
+            {
+                DetachFromChannel("channel-cleared");
+                return;
+            }
+
             AttachToChannel(channel, "channel-changed");
         }
 
@@ -115,6 +121,35 @@ namespace Vianigram.Composition.Infrastructure
             }
 
             EarlyLog.Write("Composition.MtProtoUpdates", "updates adapter attached reason="
+                + (reason ?? string.Empty)
+                + " subscribers=" + subscriberCount);
+        }
+
+        private void DetachFromChannel(string reason)
+        {
+            MtProtoUpdatesAdapter oldAdapter = null;
+            int subscriberCount;
+            lock (_gate)
+            {
+                if (_disposed) return;
+                oldAdapter = _adapter;
+                _adapter = null;
+                _attachedChannel = null;
+
+                for (int i = 0; i < _registrations.Count; i++)
+                {
+                    _registrations[i].NativeSubscription = null;
+                }
+                subscriberCount = _registrations.Count;
+            }
+
+            if (oldAdapter != null)
+            {
+                try { oldAdapter.Dispose(); }
+                catch { }
+            }
+
+            EarlyLog.Write("Composition.MtProtoUpdates", "updates adapter detached reason="
                 + (reason ?? string.Empty)
                 + " subscribers=" + subscriberCount);
         }

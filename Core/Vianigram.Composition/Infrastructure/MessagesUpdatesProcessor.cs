@@ -26,6 +26,7 @@
 // "Sync→Messages bridge".
 
 using System;
+using System.Collections.Generic;
 using Vianigram.Kernel.Events;
 using Vianigram.Kernel.Logging;
 using Vianigram.Messages.Domain.Events;
@@ -42,8 +43,14 @@ namespace Vianigram.Composition.Infrastructure
     /// </summary>
     public sealed class MessagesUpdatesProcessor : IDisposable
     {
+        private static readonly TimeSpan RecentReceivedTtl = TimeSpan.FromMinutes(2);
+        private const int RecentReceivedMaxEntries = 512;
+
         private readonly IEventBus _bus;
         private readonly IDisposable[] _subs;
+        private readonly object _recentReceivedGate = new object();
+        private readonly Dictionary<string, DateTime> _recentReceived =
+            new Dictionary<string, DateTime>(StringComparer.Ordinal);
         private int _disposed;
 
         public MessagesUpdatesProcessor(IEventBus bus)
@@ -99,6 +106,14 @@ namespace Vianigram.Composition.Infrastructure
                 MessageDto m = e.Message;
                 // Convert Telegram's int32-seconds-since-epoch to UTC.
                 DateTime at = FromUnixSeconds(m.Date);
+                if (ShouldDropDuplicateReceived(e.PeerKey, m.Id, e.TimestampUtc))
+                {
+                    EarlyLog.Write("MessagesUpdates",
+                        "bridge duplicate MessageReceived dropped peer=" +
+                        (e.PeerKey ?? "?") + " id=" + m.Id);
+                    return;
+                }
+
                 EarlyLog.Write("MessagesUpdates",
                     "bridge MessageReceived peer=" + (e.PeerKey ?? "?") +
                     " id=" + m.Id +
@@ -118,6 +133,67 @@ namespace Vianigram.Composition.Infrastructure
                 EarlyLog.Write("MessagesUpdates",
                     "RemoteMessageReceived bridge threw " +
                     ex.GetType().Name + ": " + ex.Message);
+            }
+        }
+
+        private bool ShouldDropDuplicateReceived(string peerKey, int messageId, DateTime timestampUtc)
+        {
+            if (messageId <= 0) return false;
+
+            string key = (peerKey ?? string.Empty) + "#" +
+                messageId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            DateTime now = timestampUtc.Kind == DateTimeKind.Utc
+                ? timestampUtc
+                : DateTime.UtcNow;
+
+            lock (_recentReceivedGate)
+            {
+                DateTime previous;
+                if (_recentReceived.TryGetValue(key, out previous) &&
+                    now - previous <= RecentReceivedTtl)
+                {
+                    return true;
+                }
+
+                _recentReceived[key] = now;
+                if (_recentReceived.Count > RecentReceivedMaxEntries)
+                {
+                    PruneRecentReceived(now);
+                }
+            }
+
+            return false;
+        }
+
+        private void PruneRecentReceived(DateTime nowUtc)
+        {
+            var expired = new List<string>();
+            foreach (var kv in _recentReceived)
+            {
+                if (nowUtc - kv.Value > RecentReceivedTtl)
+                {
+                    expired.Add(kv.Key);
+                }
+            }
+
+            for (int i = 0; i < expired.Count; i++)
+            {
+                _recentReceived.Remove(expired[i]);
+            }
+
+            if (_recentReceived.Count <= RecentReceivedMaxEntries) return;
+
+            int excess = _recentReceived.Count - RecentReceivedMaxEntries;
+            expired.Clear();
+            foreach (var kv in _recentReceived)
+            {
+                expired.Add(kv.Key);
+                if (expired.Count >= excess) break;
+            }
+
+            for (int i = 0; i < expired.Count; i++)
+            {
+                _recentReceived.Remove(expired[i]);
             }
         }
 

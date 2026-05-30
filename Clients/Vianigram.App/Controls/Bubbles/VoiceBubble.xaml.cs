@@ -156,6 +156,12 @@ namespace Vianigram.App.Controls.Bubbles
             ApplyAlignment();
         }
 
+        public async Task PlayAsync()
+        {
+            if (!HasAudioSource()) return;
+            await StartPlaybackAsync();
+        }
+
         private static void OnAudioSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             VoiceBubble b = d as VoiceBubble;

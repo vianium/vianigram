@@ -72,6 +72,35 @@
                                            Foreground="White" />
                             </StackPanel>
                         </Border>
+                        <Border x:Name="MediaBadge"
+                                Background="#99000000"
+                                CornerRadius="10"
+                                Padding="8,3"
+                                Margin="8"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                Visibility="Collapsed">
+                            <TextBlock x:Name="MediaBadgeText"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="White" />
+                        </Border>
+                        <Border x:Name="ActionBadge"
+                                Width="42"
+                                Height="42"
+                                Background="#B0000000"
+                                CornerRadius="21"
+                                Margin="8"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed">
+                            <TextBlock x:Name="ActionGlyph"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="20"
+                                       Foreground="White"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
                     </Grid>
                 </Border>
                 <TextBlock x:Name="CaptionText"

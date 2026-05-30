@@ -67,6 +67,7 @@ namespace Vianigram.App.ViewModels
 
             BackCommand = new RelayCommand(_ => OnBack());
             NextCommand = new AsyncCommand(NextAsync, _ => CanSubmit);
+            ProxyCommand = new RelayCommand(_ => OnProxy());
             SelectCountryCommand = new RelayCommand(_ => OnSelectCountry());
         }
 
@@ -156,6 +157,7 @@ namespace Vianigram.App.ViewModels
 
         public ICommand BackCommand { get; private set; }
         public ICommand NextCommand { get; private set; }
+        public ICommand ProxyCommand { get; private set; }
         public ICommand SelectCountryCommand { get; private set; }
 
         public async Task RefreshCountrySelectionAsync()
@@ -273,6 +275,11 @@ namespace Vianigram.App.ViewModels
         private void OnSelectCountry()
         {
             if (_nav != null) _nav.NavigateTo(Route.CountryPicker);
+        }
+
+        private void OnProxy()
+        {
+            if (_nav != null) _nav.NavigateTo(Route.ProxySettings);
         }
 
         private void ApplyCountry(TelegramCountryEntry country)

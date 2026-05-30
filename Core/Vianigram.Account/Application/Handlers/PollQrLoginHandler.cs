@@ -22,11 +22,9 @@
 //     terminal states the caller pivots immediately.
 //
 //   - PollQrLoginAsync (periodic poll) → also calls HandleAsync. If a
-//     fresh server-side token is issued (Pending), the caller may keep
-//     rendering its current QR — the new bytes are functionally
-//     equivalent (auth.exportLoginToken always returns a usable token
-//     for the same caller session) and we already render the most
-//     recent one we got.
+//     fresh server-side token is issued (Pending), the caller decides
+//     whether to swap the visible QR or keep the already-rendered token
+//     until its own expiry.
 //
 // On Accepted: decodes the embedded auth.authorization, loads the
 // auth_key for the current DC, lifts the aggregate to Authorized, and
@@ -72,6 +70,7 @@ namespace Vianigram.Account.Application.Handlers
         private readonly int _activeDcId;
         private readonly int _apiId;
         private readonly string _apiHash;
+        private const long MaxReasonableTelegramUserId = 100000000000000L;
 
         public PollQrLoginHandler(
             AccountIdentity aggregate,
@@ -131,23 +130,19 @@ namespace Vianigram.Account.Application.Handlers
                         AccountError.Unknown("auth.exportLoginToken returned empty token"));
                 }
 
-                Uri tgUri;
                 try
                 {
-                    tgUri = new Uri("tg://login?token=" + ToTelegramQrToken(wire.Token));
+                    var token = QrLoginToken.FromTelegramToken(
+                        wire.Token,
+                        FromUnixSeconds(wire.ExpiresUnixSeconds));
+                    return Result<QrLoginPoll, AccountError>.Ok(
+                        new QrLoginPoll(QrLoginStatus.Pending, null, 0L, token));
                 }
                 catch (Exception ex)
                 {
                     return Result<QrLoginPoll, AccountError>.Fail(
                         AccountError.Unknown("could not build tg:// URI: " + ex.Message, ex));
                 }
-
-                var token = new QrLoginToken(
-                    ToLowerHex(wire.Token),
-                    tgUri,
-                    FromUnixSeconds(wire.ExpiresUnixSeconds));
-                return Result<QrLoginPoll, AccountError>.Ok(
-                    new QrLoginPoll(QrLoginStatus.Pending, null, 0L, token));
             }
 
             // ---- MigrateTo: switch the unauthenticated channel to the
@@ -189,12 +184,14 @@ namespace Vianigram.Account.Application.Handlers
                 if (importResult.IsFail)
                 {
                     _log.Warn("post-migrate importLoginToken failed: " + importResult.Error);
+                    migrationPort.ResetQrMigrationAfterFailure();
                     return Result<QrLoginPoll, AccountError>.Fail(importResult.Error);
                 }
 
                 var imported = importResult.Value;
                 if (imported == null)
                 {
+                    migrationPort.ResetQrMigrationAfterFailure();
                     return Result<QrLoginPoll, AccountError>.Fail(
                         AccountError.Unknown("post-migrate importLoginToken returned null wire"));
                 }
@@ -210,6 +207,7 @@ namespace Vianigram.Account.Application.Handlers
                 }
                 if (imported.Kind == QrPollKind.Expired)
                 {
+                    migrationPort.ResetQrMigrationAfterFailure();
                     return Result<QrLoginPoll, AccountError>.Ok(
                         new QrLoginPoll(QrLoginStatus.Expired, null, 0L));
                 }
@@ -251,9 +249,24 @@ namespace Vianigram.Account.Application.Handlers
             var decoded = TlDecoder.DecodeAuthorization(authorizationBytes);
             if (decoded == null)
             {
-                var err = AccountError.Unknown("auth.loginTokenSuccess: authorization could not be decoded");
-                _aggregate.ApplyAuthFailure(err);
-                return Result<QrLoginPoll, AccountError>.Fail(err);
+                _log.Warn(
+                    "authorization decode failed; " +
+                    DescribeAuthorizationBytes(authorizationBytes) +
+                    "; trying users.getFullUser(inputUserSelf)");
+                long resolvedUserId = await TryResolveUserIdFromAuthorizedSessionAsync(ct).ConfigureAwait(false);
+                if (!IsReasonableUserId(resolvedUserId))
+                {
+                    var err = AccountError.Unknown(
+                        "auth.loginTokenSuccess: authorization could not be decoded and self lookup failed");
+                    _aggregate.ApplyAuthFailure(err);
+                    return Result<QrLoginPoll, AccountError>.Fail(err);
+                }
+
+                decoded = new TlDecoder.AuthorizationDecoded
+                {
+                    SignupRequired = false,
+                    UserId = resolvedUserId
+                };
             }
 
             if (decoded.SignupRequired)
@@ -263,6 +276,27 @@ namespace Vianigram.Account.Application.Handlers
                 return Result<QrLoginPoll, AccountError>.Ok(
                     new QrLoginPoll(QrLoginStatus.SignUpRequired, null));
             }
+
+            if (!IsReasonableUserId(decoded.UserId))
+            {
+                _log.Warn(
+                    "authorization decoded an invalid userId=" + decoded.UserId +
+                    "; trying users.getFullUser(inputUserSelf)");
+                long resolvedUserId = await TryResolveUserIdFromAuthorizedSessionAsync(ct).ConfigureAwait(false);
+                if (!IsReasonableUserId(resolvedUserId))
+                {
+                    var err = AccountError.Unknown(
+                        "auth.loginTokenSuccess: resolved userId is invalid: " + decoded.UserId);
+                    _aggregate.ApplyAuthFailure(err);
+                    return Result<QrLoginPoll, AccountError>.Fail(err);
+                }
+
+                decoded.UserId = resolvedUserId;
+            }
+
+            _log.Info(
+                "authorization resolved: userId=" + decoded.UserId + " " +
+                DescribeAuthorizationBytes(authorizationBytes));
 
             int currentDcId = GetCurrentDcId();
             var migrationPort = _rpc as IQrLoginMigrationPort;
@@ -375,6 +409,44 @@ namespace Vianigram.Account.Application.Handlers
                 new QrLoginPoll(QrLoginStatus.Accepted, null, decoded.UserId));
         }
 
+        private async Task<long> TryResolveUserIdFromAuthorizedSessionAsync(CancellationToken ct)
+        {
+            try
+            {
+                var self = await _rpc.UsersGetFullUserAsync(InputUserSelf.Instance, ct).ConfigureAwait(false);
+                if (self.IsFail)
+                {
+                    _log.Warn("users.getFullUser fallback failed: " + self.Error);
+                    return 0L;
+                }
+
+                UserFullResponse wire = self.Value;
+                if (wire == null)
+                {
+                    _log.Warn("users.getFullUser fallback returned null wire");
+                    return 0L;
+                }
+
+                if (!IsReasonableUserId(wire.UserId))
+                {
+                    _log.Warn("users.getFullUser fallback returned invalid userId=" + wire.UserId);
+                    return 0L;
+                }
+
+                _log.Info("users.getFullUser fallback resolved userId=" + wire.UserId);
+                return wire.UserId;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _log.Warn("users.getFullUser fallback threw: " + ex.GetType().Name + ": " + ex.Message);
+                return 0L;
+            }
+        }
+
         /// <summary>
         /// Fetch the SRP challenge via account.getPassword and transition
         /// the aggregate to WaitingForPassword. Used by both the export
@@ -472,21 +544,39 @@ namespace Vianigram.Account.Application.Handlers
             return _activeDcId;
         }
 
-        private static string ToTelegramQrToken(byte[] token)
+        private static bool IsReasonableUserId(long userId)
         {
-            return Convert.ToBase64String(token)
-                .TrimEnd('=')
-                .Replace('+', '-')
-                .Replace('/', '_');
+            return userId > 0L && userId <= MaxReasonableTelegramUserId;
         }
 
-        private static string ToLowerHex(byte[] bytes)
+        private static string DescribeAuthorizationBytes(byte[] bytes)
         {
-            var sb = new StringBuilder(bytes.Length * 2);
-            for (int i = 0; i < bytes.Length; i++)
+            int length = bytes == null ? 0 : bytes.Length;
+            return "auth_len=" + length +
+                   " auth_ctor=" + TryReadCtorHex(bytes) +
+                   " auth_hex_prefix=" + HexPrefix(bytes, 48);
+        }
+
+        private static string TryReadCtorHex(byte[] bytes)
+        {
+            if (bytes == null || bytes.Length < 4) return "(none)";
+            uint ctor = (uint)(bytes[0]
+                | (bytes[1] << 8)
+                | (bytes[2] << 16)
+                | (bytes[3] << 24));
+            return "0x" + ctor.ToString("x8", CultureInfo.InvariantCulture);
+        }
+
+        private static string HexPrefix(byte[] bytes, int maxBytes)
+        {
+            if (bytes == null || bytes.Length == 0) return "(empty)";
+            int count = bytes.Length < maxBytes ? bytes.Length : maxBytes;
+            var sb = new StringBuilder(count * 2);
+            for (int i = 0; i < count; i++)
             {
                 sb.Append(bytes[i].ToString("x2", CultureInfo.InvariantCulture));
             }
+            if (bytes.Length > count) sb.Append("...");
             return sb.ToString();
         }
 

@@ -81,6 +81,8 @@ namespace Vianigram.Composition.Infrastructure
         private string _currentDcHost;
         private int _currentDcPort;
         private bool _connectionInitialized;
+        private Func<bool> _isAuthorizedForUserChannel;
+        private int _authorizationGateLogged;
         private const uint InvokeWithLayerCtor = 0xda9b0d0d;
         private const uint InitConnectionCtor = 0xc1cd5ea9;
         private const int TelegramLayer = 214;
@@ -95,11 +97,20 @@ namespace Vianigram.Composition.Infrastructure
         // The TypedStubs partial uses this through the _peerCache field.
         private readonly IPeerCache _peerCache;
 
+        // Persistent cache of cross-DC authorization blobs minted by
+        // auth.exportAuthorization. Wired post-construction via
+        // ConfigureImportedAuthorizationCache so the cache only becomes
+        // active once the Account aggregate is built and the user_id is
+        // known. Optional: when null, MediaDc.ImportMediaAuthorizationCoreAsync
+        // falls back to the live export+import path on every media DC.
+        private Vianigram.Storage.Ports.Stubs.IImportedAuthorizationCacheStore _importedAuthCache;
+        private Func<long> _importedAuthUserIdProvider;
+
         public event Action<Vianigram.MTProto.MtProtoChannel> ChannelChanged;
 
         public Vianigram.MTProto.MtProtoChannel CurrentChannelSnapshot
         {
-            get { return _channel; }
+            get { return IsAuthorizedForUserChannel() ? _channel : null; }
         }
 
         public MtProtoChannelAdapter(Vianigram.MTProto.MtProtoChannel channel)
@@ -199,8 +210,55 @@ namespace Vianigram.Composition.Infrastructure
         // when the handshake task is already complete.
         private async Task<Vianigram.MTProto.MtProtoChannel> GetChannelAsync(CancellationToken ct)
         {
+            if (!IsAuthorizedForUserChannel())
+            {
+                LogAuthorizationGateBlocked("deferred resolve");
+                throw new InvalidOperationException("Main MTProto channel is parked until the account is authorized.");
+            }
+
             var cached = _channel;
             if (cached != null) return cached;
+
+            Task<bool> inFlightMigration = null;
+            lock (_migrationGate)
+            {
+                if (_migrationTask != null && !_migrationTask.IsCompleted)
+                {
+                    inFlightMigration = _migrationTask;
+                }
+            }
+
+            if (inFlightMigration != null)
+            {
+                EarlyLog.Write(
+                    "MTProto.Channel",
+                    "channel null; awaiting in-flight migration before deferred resolution");
+                try
+                {
+                    Task cancelTask = Task.Delay(Timeout.Infinite, ct);
+                    Task completed = await Task.WhenAny(inFlightMigration, cancelTask).ConfigureAwait(false);
+                    if (!object.ReferenceEquals(completed, inFlightMigration))
+                    {
+                        throw new OperationCanceledException(ct);
+                    }
+
+                    await inFlightMigration.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    EarlyLog.Write(
+                        "MTProto.Channel",
+                        "in-flight migration failed before deferred resolution: " +
+                        ex.GetType().Name + ": " + ex.Message);
+                }
+
+                cached = _channel;
+                if (cached != null) return cached;
+            }
             if (_deferred == null)
             {
                 // Should be unreachable — one of the two ctors must have run.
@@ -212,6 +270,7 @@ namespace Vianigram.Composition.Infrastructure
             // touches don't keep awaiting. Volatile would also work — we use
             // the lock to mirror the pattern elsewhere in this class.
             Vianigram.MTProto.MtProtoChannel promoted = null;
+            Vianigram.MTProto.MtProtoChannel staleResolved = null;
             Vianigram.MTProto.MtProtoChannel result;
             lock (_resolveGate)
             {
@@ -220,10 +279,71 @@ namespace Vianigram.Composition.Infrastructure
                     _channel = resolved;
                     promoted = resolved;
                 }
+                else if (!object.ReferenceEquals(_channel, resolved))
+                {
+                    staleResolved = resolved;
+                }
                 result = _channel;
+            }
+            if (staleResolved != null)
+            {
+                try { staleResolved.Close(); }
+                catch (Exception) { }
             }
             if (promoted != null) PublishChannelChanged(promoted);
             return result;
+        }
+
+        public void SetAuthorizationGate(Func<bool> isAuthorized)
+        {
+            _isAuthorizedForUserChannel = isAuthorized;
+        }
+
+        /// <summary>
+        /// Wires the persistent imported-authorization cache so subsequent
+        /// media-DC bootstraps short-circuit <c>auth.exportAuthorization</c>
+        /// on cache hit. Safe to call multiple times; the most recent
+        /// configuration wins. Pass <paramref name="cache"/> = null to
+        /// disable the cache (the adapter then falls back to the live
+        /// export+import path on every media DC).
+        /// </summary>
+        public void ConfigureImportedAuthorizationCache(
+            Vianigram.Storage.Ports.Stubs.IImportedAuthorizationCacheStore cache,
+            Func<long> userIdProvider)
+        {
+            _importedAuthCache = cache;
+            _importedAuthUserIdProvider = userIdProvider;
+        }
+
+        public void ParkAfterLogout()
+        {
+            Vianigram.MTProto.MtProtoChannel oldChannel = null;
+
+            lock (_resolveGate)
+            {
+                oldChannel = _channel;
+                _channel = null;
+            }
+
+            lock (_migrationGate)
+            {
+                unchecked { _migrationGeneration++; }
+                _migrationTask = null;
+                _migrationTaskDcId = 0;
+                _migrationTaskForceFreshKey = false;
+                _migrationTaskForceReopen = false;
+            }
+
+            ResetConnectionInitialized();
+            if (oldChannel != null)
+            {
+                try { oldChannel.Close(); }
+                catch (Exception) { }
+            }
+            CloseMediaDcSessions();
+
+            PublishChannelChanged(null);
+            EarlyLog.Write("MTProto.Channel", "main channel parked after logout");
         }
 
         private Task<bool> EnsureMigratedAsync(int targetDcId, bool forceFreshKey, CancellationToken ct)
@@ -291,6 +411,12 @@ namespace Vianigram.Composition.Infrastructure
             bool forceReopen,
             CancellationToken ct)
         {
+            if (!IsAuthorizedForUserChannel())
+            {
+                LogAuthorizationGateBlocked("open DC#" + targetDcId);
+                return TaskFromBool(false);
+            }
+
             if (targetDcId <= 0 || targetDcId > 5)
             {
                 return TaskFromBool(false);
@@ -364,6 +490,12 @@ namespace Vianigram.Composition.Infrastructure
                     Vianigram.Kernel.Logging.EarlyLog.Write(
                         "MTProto.DC",
                         "migration requested but key services are not wired for DC#" + targetDcId);
+                    return false;
+                }
+
+                if (!IsMigrationCurrent(generation) || !IsAuthorizedForUserChannel())
+                {
+                    LogAuthorizationGateBlocked("migration start DC#" + targetDcId);
                     return false;
                 }
 
@@ -454,6 +586,14 @@ namespace Vianigram.Composition.Infrastructure
                             }
 
                             key = keyResult.Value;
+                            if (!IsMigrationCurrent(generation) || !IsAuthorizedForUserChannel())
+                            {
+                                LogAuthorizationGateBlocked("save generated key DC#" + targetDcId);
+                                ClearAuthKeyRecord(key);
+                                key = null;
+                                return false;
+                            }
+
                             try
                             {
                                 await _migrationAuthKeyStore.SaveAsync(targetDcId, key, ct).ConfigureAwait(false);
@@ -476,6 +616,14 @@ namespace Vianigram.Composition.Infrastructure
                                 " elapsed=" + openSw.ElapsedMilliseconds + "ms");
                             TelegramDcOptions.ReportEndpointFailure(endpoint);
                             continue;
+                        }
+
+                        if (!IsMigrationCurrent(generation) || !IsAuthorizedForUserChannel())
+                        {
+                            try { migratedChannel.Close(); }
+                            catch (Exception) { }
+                            LogAuthorizationGateBlocked("publish migrated channel DC#" + targetDcId);
+                            return false;
                         }
 
                         Vianigram.MTProto.MtProtoChannel oldChannel = null;
@@ -750,6 +898,12 @@ namespace Vianigram.Composition.Infrastructure
                 " dc=" + CurrentDcId +
                 " connInited=" + IsConnectionInitialized());
 
+            if (!IsAuthorizedForUserChannel())
+            {
+                LogAuthorizationGateBlocked("CallInternal ctor=0x" + topCtor.ToString("x8"));
+                return CallOutcome.Fail("AuthKeyInvalid", 401, "AUTH_KEY_UNREGISTERED", 0);
+            }
+
             try
             {
                 // If this adapter was built with the deferred ctor and DH
@@ -930,6 +1084,12 @@ namespace Vianigram.Composition.Infrastructure
         {
             if (requestBuffer == null) throw new ArgumentNullException("requestBuffer");
 
+            if (!IsAuthorizedForUserChannel())
+            {
+                LogAuthorizationGateBlocked("CallInternalBuffer");
+                return CallOutcome.Fail("AuthKeyInvalid", 401, "AUTH_KEY_UNREGISTERED", 0);
+            }
+
             try
             {
                 Vianigram.MTProto.MtProtoChannel chan = _channel;
@@ -1097,6 +1257,14 @@ namespace Vianigram.Composition.Infrastructure
         private static bool TryGetMigrationDcId(CallOutcome outcome, out int dcId)
         {
             dcId = 0;
+            if (IsFileMigration(outcome))
+            {
+                EarlyLog.Write(
+                    "MTProto.Channel",
+                    "FILE_MIGRATE ignored on shared user channel; preserving current DC.");
+                return false;
+            }
+
             if (outcome.Parameter > 0)
             {
                 string kind = outcome.Kind ?? string.Empty;
@@ -1129,6 +1297,18 @@ namespace Vianigram.Composition.Infrastructure
             }
 
             return dcId > 0;
+        }
+
+        private static bool IsFileMigration(CallOutcome outcome)
+        {
+            string kind = outcome.Kind ?? string.Empty;
+            if (kind.IndexOf("FileMigrate", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            string message = outcome.Message ?? string.Empty;
+            return message.IndexOf("FILE_MIGRATE_", StringComparison.Ordinal) >= 0;
         }
 
         private static bool IsAuthKeyInvalid(CallOutcome outcome)
@@ -1183,9 +1363,51 @@ namespace Vianigram.Composition.Infrastructure
             }
         }
 
+        private bool IsAuthorizedForUserChannel()
+        {
+            Func<bool> gate = _isAuthorizedForUserChannel;
+            if (gate == null)
+            {
+                return true;
+            }
+
+            try
+            {
+                bool allowed = gate();
+                if (allowed && Interlocked.Exchange(ref _authorizationGateLogged, 0) != 0)
+                {
+                    EarlyLog.Write("MTProto.Channel", "authorization gate reopened");
+                }
+                return allowed;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void LogAuthorizationGateBlocked(string reason)
+        {
+            if (Interlocked.Exchange(ref _authorizationGateLogged, 1) != 0)
+            {
+                return;
+            }
+
+            EarlyLog.Write(
+                "MTProto.Channel",
+                "authorization gate blocked main-channel work: " + (reason ?? string.Empty));
+        }
+
+        private bool IsMigrationCurrent(int generation)
+        {
+            lock (_migrationGate)
+            {
+                return _migrationGeneration == generation;
+            }
+        }
+
         private void PublishChannelChanged(Vianigram.MTProto.MtProtoChannel channel)
         {
-            if (channel == null) return;
             Action<Vianigram.MTProto.MtProtoChannel> handler = ChannelChanged;
             if (handler == null) return;
             try

@@ -108,6 +108,15 @@ namespace Vianigram.Composition.Infrastructure
             return FromResult(Result<byte[], Vianigram.Media.Domain.MediaError>.Fail(err));
         }
 
+        Task<Result<byte[], Vianigram.Media.Domain.MediaError>>
+            Vianigram.Media.Ports.Outbound.IMtProtoRpcPort.CallAsync(
+                byte[] tlRequest, int dcId, CancellationToken ct)
+        {
+            _log.Debug("Media.CallAsync(dc) stubbed (no DC).");
+            var err = Vianigram.Media.Domain.MediaError.NetworkError(NotConnectedMessage);
+            return FromResult(Result<byte[], Vianigram.Media.Domain.MediaError>.Fail(err));
+        }
+
         // Buffer overload — same NotConnected stub for the zero-copy media
         // path. Real wiring lives in MtProtoChannelAdapter.
         Task<Result<IBuffer, Vianigram.Media.Domain.MediaError>>
@@ -115,6 +124,15 @@ namespace Vianigram.Composition.Infrastructure
                 IBuffer requestBuffer, CancellationToken ct)
         {
             _log.Debug("Media.CallBufferAsync stubbed (no DC).");
+            var err = Vianigram.Media.Domain.MediaError.NetworkError(NotConnectedMessage);
+            return FromResult(Result<IBuffer, Vianigram.Media.Domain.MediaError>.Fail(err));
+        }
+
+        Task<Result<IBuffer, Vianigram.Media.Domain.MediaError>>
+            Vianigram.Media.Ports.Outbound.IMtProtoRpcPort.CallBufferAsync(
+                IBuffer requestBuffer, int dcId, CancellationToken ct)
+        {
+            _log.Debug("Media.CallBufferAsync(dc) stubbed (no DC).");
             var err = Vianigram.Media.Domain.MediaError.NetworkError(NotConnectedMessage);
             return FromResult(Result<IBuffer, Vianigram.Media.Domain.MediaError>.Fail(err));
         }

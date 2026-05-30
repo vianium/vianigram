@@ -591,6 +591,15 @@ namespace Vianigram.App
                         log.Info("main channel warm-up begin dc=" + homeDcId);
                         bool warmed = await mainAdapter.MigrateToDcAsync(homeDcId, false, CancellationToken.None).ConfigureAwait(false);
                         log.Info("main channel warm-up result=" + warmed + " dc=" + homeDcId);
+
+                        // H (Media DC pre-warm) — kick off avatar/file DCs
+                        // now so the first ChatListPage avatar download
+                        // doesn't pay the open + auth.import cost on the
+                        // demand path.
+                        if (warmed)
+                        {
+                            SchedulePrewarmCommonMediaDcs(mainAdapter, homeDcId, log);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -598,6 +607,63 @@ namespace Vianigram.App
                     log.Warn("main channel warm-up threw: " + ex);
                 }
             });
+        }
+
+        /// <summary>
+        /// Fire-and-forget pre-warm of the Telegram media DC cluster
+        /// (DC#2 EU and DC#4 AMS — the avatar/file storage DCs). Runs
+        /// in parallel with the rest of post-login bootstrap so the
+        /// first ChatListPage avatar fetch finds a ready session and
+        /// skips both the TCP open and the auth.importAuthorization
+        /// round-trip. Best-effort: per-DC failures are logged and
+        /// swallowed.
+        ///
+        /// Caller invariants: <paramref name="adapter"/> must be the
+        /// live MtProtoChannelAdapter (not the stub), the user must
+        /// already be authorised, and the main channel must have just
+        /// landed on <paramref name="homeDcId"/>. We skip pre-warming
+        /// the home DC itself — every RPC there reuses the main
+        /// channel, no media session needed.
+        /// </summary>
+        private static void SchedulePrewarmCommonMediaDcs(
+            Vianigram.Composition.Infrastructure.MtProtoChannelAdapter adapter,
+            int homeDcId,
+            IComponentLogger log)
+        {
+            if (adapter == null) return;
+
+            // The static set of Telegram media-cluster DC ids. Pre-warming
+            // every non-home DC here is cheap (8 RPCs total in the worst
+            // case) and saves ~350-500 ms on the first media download.
+            int[] mediaDcs = new int[] { 2, 4 };
+
+            for (int i = 0; i < mediaDcs.Length; i++)
+            {
+                int targetDcId = mediaDcs[i];
+                if (targetDcId == homeDcId)
+                {
+                    // No separate session needed — the main channel
+                    // already handles RPCs for this DC.
+                    continue;
+                }
+
+                int capturedDcId = targetDcId;
+                Task.Run(async delegate
+                {
+                    try
+                    {
+                        var sw = Stopwatch.StartNew();
+                        await adapter.PrewarmMediaDcAsync(capturedDcId, CancellationToken.None).ConfigureAwait(false);
+                        sw.Stop();
+                        log.Info("media DC#" + capturedDcId + " prewarm dispatched elapsed=" +
+                            sw.ElapsedMilliseconds + "ms");
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Warn("media DC#" + capturedDcId + " prewarm threw: " + ex);
+                    }
+                });
+            }
         }
 
         private void OnHardwareBackPressed(object sender, BackPressedEventArgs e)
@@ -651,6 +717,16 @@ namespace Vianigram.App
                             log.Info("post-login: migrating main MtProtoChannel to home DC#" + homeDcId);
                             bool migrated = await mainAdapter.ReopenToDcWithPersistedAuthKeyAsync(homeDcId, CancellationToken.None).ConfigureAwait(false);
                             log.Info("post-login: main channel reopen result=" + migrated + " dc=" + homeDcId);
+
+                            // H (Media DC pre-warm) — same dispatch as
+                            // the rehydrated-session path. Runs in
+                            // parallel with BootstrapSyncCoreAsync so
+                            // updates.getState and avatar pre-warm
+                            // overlap on the wire.
+                            if (migrated)
+                            {
+                                SchedulePrewarmCommonMediaDcs(mainAdapter, homeDcId, log);
+                            }
                         }
                         catch (Exception ex)
                         {

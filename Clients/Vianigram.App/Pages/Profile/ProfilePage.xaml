@@ -38,6 +38,7 @@
                             Margin="0,8,0,18">
                     <controls:AvatarCircle AvatarSize="108"
                                            Initials="{Binding AvatarLetter}"
+                                           Image="{Binding AvatarImage}"
                                            BackgroundColor="{StaticResource VgSuccessBrush}"
                                            HorizontalAlignment="Center" />
 

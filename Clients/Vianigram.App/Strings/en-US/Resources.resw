@@ -71,7 +71,7 @@
     <value>vianigram</value>
   </data>
   <data name="WelcomeVersion.Text" xml:space="preserve">
-    <value>0.1.0.0</value>
+    <value>0.1.2.0</value>
   </data>
   <data name="WelcomeTagline.Text" xml:space="preserve">
     <value>an unofficial telegram client built native for windows phone — fast pivots, tilt, and the metro you remember.</value>
@@ -87,6 +87,9 @@
   </data>
   <data name="WelcomeContinue.Content" xml:space="preserve">
     <value>continue with telegram</value>
+  </data>
+  <data name="WelcomeProxy.Content" xml:space="preserve">
+    <value>MTProxy</value>
   </data>
   <data name="WelcomeScanQr.Content" xml:space="preserve">
     <value>scan qr</value>
@@ -254,6 +257,9 @@
   <data name="QrLoginUsePhoneButton.Content" xml:space="preserve">
     <value>use phone number</value>
   </data>
+  <data name="QrLoginProxyButton.Content" xml:space="preserve">
+    <value>MTProxy</value>
+  </data>
   <data name="QrLoginStatusConnecting" xml:space="preserve">
     <value>Connecting to Telegram...</value>
   </data>
@@ -304,6 +310,9 @@
   </data>
   <data name="QrLoginStatusRetry" xml:space="preserve">
     <value>Couldn't reach Telegram. Tap retry to try again.</value>
+  </data>
+  <data name="QrLoginStatusNetworkBlocked" xml:space="preserve">
+    <value>Your network seems to block this Telegram server. Try signing in with your phone number or configure MTProxy.</value>
   </data>
   <data name="QrLoginRetryButton.Content" xml:space="preserve">
     <value>Retry</value>

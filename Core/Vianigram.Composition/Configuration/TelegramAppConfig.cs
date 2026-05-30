@@ -3,6 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Vianigram.Kernel.Logging;
+using Vianigram.Storage.Ports.Stubs;
 
 namespace Vianigram.Composition.Configuration
 {
@@ -103,13 +107,57 @@ namespace Vianigram.Composition.Configuration
     internal static class TelegramDcOptions
     {
         public const int DefaultPort = 443;
-        public static readonly TimeSpan CachedOpenTimeout = TimeSpan.FromSeconds(5);
-        public static readonly TimeSpan AuthKeyGenerationTimeout = TimeSpan.FromSeconds(16);
-        public static readonly TimeSpan ChannelOpenTimeout = TimeSpan.FromSeconds(7);
+        // ChannelOpen budgets — also ARM-aware. The "cached" path
+        // (auth_key already in store) still does TCP connect + framing
+        // greeting + init_connection RPC + first-frame decrypt. On
+        // ARM Lumia hardware that round-trip + AES-IGE decrypt on the
+        // initial msgs_container observed ~7-11 s wall time. 5 s was
+        // cutting it close even on a healthy network. 15 s gives the
+        // slow-CPU device room without making a dead endpoint
+        // pathological — the intra-DC walk caps at 3 attempts so the
+        // worst-case for cache-hit boot is ~45 s.
+        public static readonly TimeSpan CachedOpenTimeout = TimeSpan.FromSeconds(15);
+        // 16 s is enough for the DH handshake on a modern x86 desktop
+        // (the emulator hits ~12 s reliably). ARM-on-WP8.1 hardware has
+        // no SIMD acceleration for the 2048-bit RSA ModPow that
+        // dominates step 3 / step 5; observed wall times on real
+        // devices land in the 18-25 s range, hitting the timeout
+        // before the handshake completes. Bump the cap so legitimate
+        // slow-CPU handshakes can finish; the outer race wall
+        // deadline (45 s) still bounds total bootstrap time.
+        public static readonly TimeSpan AuthKeyGenerationTimeout = TimeSpan.FromSeconds(35);
+        public static readonly TimeSpan ChannelOpenTimeout = TimeSpan.FromSeconds(20);
 
         private static readonly object HealthGate = new object();
         private static readonly Dictionary<string, EndpointHealth> Health =
             new Dictionary<string, EndpointHealth>(StringComparer.OrdinalIgnoreCase);
+
+        // Persistent store wired by the composition root. When null we
+        // operate in process-only mode (legacy behavior). When set, every
+        // success/failure is fire-and-forget upserted so the next cold
+        // start sees the same view of which endpoints are dead.
+        private static IEndpointHealthStore _healthStore;
+
+        // Persistent dc_options snapshot. Populated by
+        // <see cref="AttachPersistentDcOptionsStoreAsync"/> from the
+        // server's <c>help.getConfig</c> response, persisted across
+        // launches. Augments (does not replace) the hardcoded bootstrap
+        // plan. Keyed by (dcId, host, port, ipv6) under the assumption
+        // that the server returns canonical IPs.
+        private static readonly object DcOptionsGate = new object();
+        private static List<DcOptionRecord> _persistedDcOptions = new List<DcOptionRecord>();
+        private static IDcOptionsStore _dcOptionsStore;
+
+        // Maximum cooldown when an endpoint has crossed the
+        // "consistently broken across launches" threshold (10+ persistent
+        // failures, zero successes since last hydrate). The cap is 1 hour
+        // — longer than the typical mobile-network handover window so
+        // users on a recovering network still get re-probed reasonably
+        // soon, but long enough that a known-dead `:5222` (we removed it
+        // from the plan but the same logic applies to any future bad
+        // host) doesn't waste a single keygen round-trip.
+        private const int PersistentlyBrokenCooldownSeconds = 3600;
+        private const int PersistentlyBrokenFailureThreshold = 10;
         private static readonly PhoneDcRule[] LoginPhoneDcRules =
             new[]
             {
@@ -233,13 +281,40 @@ namespace Vianigram.Composition.Configuration
 
                 EndpointHealth ah = GetHealthSnapshot(a);
                 EndpointHealth bh = GetHealthSnapshot(b);
+
+                // 1. Cooling endpoints last (recently failed, waiting out
+                //    the cooldown).
                 bool aCooling = ah != null && ah.CooldownUntilUtc > now;
                 bool bCooling = bh != null && bh.CooldownUntilUtc > now;
                 if (aCooling != bCooling) return aCooling ? 1 : -1;
 
-                int aFailures = ah == null ? 0 : ah.Failures;
-                int bFailures = bh == null ? 0 : bh.Failures;
-                if (aFailures != bFailures) return aFailures.CompareTo(bFailures);
+                // 2. Endpoints with a recorded success first; among those,
+                //    most recent success wins (TDLib DcOptionsSet.cpp:150
+                //    "Ok > Connecting > Error" maps to this).
+                bool aSuccess = ah != null && ah.LastSuccessUtc != DateTime.MinValue;
+                bool bSuccess = bh != null && bh.LastSuccessUtc != DateTime.MinValue;
+                if (aSuccess != bSuccess) return aSuccess ? -1 : 1;
+                if (aSuccess && bSuccess)
+                {
+                    int success = bh.LastSuccessUtc.CompareTo(ah.LastSuccessUtc);
+                    if (success != 0) return success;
+                }
+
+                // 3. Among neither-success endpoints, fewer recorded
+                //    failures first — an endpoint that has timed out 5×
+                //    is statistically worse than one that hasn't been
+                //    tried yet (Failures == 0 with LastSuccessUtc ==
+                //    MinValue means "fresh, never tried").
+                int af = ah != null ? ah.Failures : 0;
+                int bf = bh != null ? bh.Failures : 0;
+                if (af != bf) return af.CompareTo(bf);
+
+                // 4. Among same-failure-count, prefer the endpoint whose
+                //    last failure was longer ago (more time to recover).
+                if (ah != null && bh != null && ah.LastFailureUtc != bh.LastFailureUtc)
+                {
+                    return ah.LastFailureUtc.CompareTo(bh.LastFailureUtc);
+                }
 
                 return a.Order.CompareTo(b.Order);
             });
@@ -250,23 +325,7 @@ namespace Vianigram.Composition.Configuration
         public static void ReportEndpointSuccess(TelegramDcEndpoint endpoint)
         {
             if (endpoint == null) return;
-            lock (HealthGate)
-            {
-                EndpointHealth health;
-                if (!Health.TryGetValue(endpoint.Key, out health))
-                {
-                    return;
-                }
-
-                health.Failures = 0;
-                health.CooldownUntilUtc = DateTime.MinValue;
-                health.LastSuccessUtc = DateTime.UtcNow;
-            }
-        }
-
-        public static void ReportEndpointFailure(TelegramDcEndpoint endpoint)
-        {
-            if (endpoint == null) return;
+            EndpointHealth snapshot;
             lock (HealthGate)
             {
                 EndpointHealth health;
@@ -276,11 +335,309 @@ namespace Vianigram.Composition.Configuration
                     Health[endpoint.Key] = health;
                 }
 
+                health.DcId = endpoint.DcId;
+                health.Family = endpoint.Ipv6 ? 6 : 4;
+                health.Failures = 0;
+                health.Successes++;
+                health.CooldownUntilUtc = DateTime.MinValue;
+                health.LastSuccessUtc = DateTime.UtcNow;
+                health.LastFailureReason = string.Empty;
+                snapshot = CloneLocked(health);
+            }
+
+            FireAndForgetPersist(endpoint, snapshot);
+        }
+
+        public static void ReportEndpointFailure(TelegramDcEndpoint endpoint)
+        {
+            ReportEndpointFailure(endpoint, null);
+        }
+
+        /// <summary>
+        /// Overload that also records the reason text (e.g.
+        /// <c>"WSAEHOSTUNREACH"</c>). Reasons survive across launches via
+        /// the persistent store so we can decide e.g. "this host has been
+        /// HOST_UNREACHABLE 12 times — keep it deprioritised for an
+        /// hour even if a healthy endpoint exists in the same plan".
+        /// </summary>
+        public static void ReportEndpointFailure(TelegramDcEndpoint endpoint, string reason)
+        {
+            if (endpoint == null) return;
+            EndpointHealth snapshot;
+            lock (HealthGate)
+            {
+                EndpointHealth health;
+                if (!Health.TryGetValue(endpoint.Key, out health))
+                {
+                    health = new EndpointHealth();
+                    Health[endpoint.Key] = health;
+                }
+
+                health.DcId = endpoint.DcId;
+                health.Family = endpoint.Ipv6 ? 6 : 4;
                 health.Failures++;
                 health.LastFailureUtc = DateTime.UtcNow;
-                int cooldownSeconds = Math.Min(120, 10 * health.Failures);
+                health.LastFailureReason = reason ?? health.LastFailureReason ?? string.Empty;
+
+                int cooldownSeconds;
+                if (health.Failures >= PersistentlyBrokenFailureThreshold && health.Successes == 0)
+                {
+                    // No proof this endpoint EVER worked from this device;
+                    // sit it out for an hour. Networks heal slowly; users
+                    // on a flaky mobile carrier benefit from a long
+                    // backoff over churning the radio.
+                    cooldownSeconds = PersistentlyBrokenCooldownSeconds;
+                }
+                else
+                {
+                    // Short, linearly escalating backoff while we still
+                    // have hope (or proof) the endpoint can recover.
+                    cooldownSeconds = Math.Min(120, 10 * health.Failures);
+                }
                 health.CooldownUntilUtc = health.LastFailureUtc.AddSeconds(cooldownSeconds);
+                snapshot = CloneLocked(health);
             }
+
+            FireAndForgetPersist(endpoint, snapshot);
+        }
+
+        /// <summary>
+        /// Wires a persistent store and hydrates the in-memory dictionary
+        /// from it. Idempotent: a second call replaces the store but
+        /// preserves the in-memory snapshot built so far (so we don't
+        /// lose mid-session signal if composition decides to swap stores).
+        /// Call this once at composition, after SQLite is ready and
+        /// before TelegramDcOptions.GetConnectionPlan is hit by any
+        /// auth_key path.
+        /// </summary>
+        public static async Task AttachPersistentHealthStoreAsync(
+            IEndpointHealthStore store,
+            CancellationToken ct)
+        {
+            if (store == null) return;
+
+            // Prune very old entries first — a stale 1-year-old cooldown
+            // for an endpoint Telegram has since rebalanced would just
+            // delay our first real probe.
+            try
+            {
+                await store.PruneOlderThanAsync(
+                    DateTime.UtcNow.AddDays(-7), ct).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                EarlyLog.Write(
+                    "TelegramDcOptions",
+                    "persistent health prune threw: " + ex.GetType().Name + ": " + ex.Message);
+            }
+
+            List<EndpointHealthRecord> rows;
+            try
+            {
+                rows = await store.LoadAllAsync(ct).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                EarlyLog.Write(
+                    "TelegramDcOptions",
+                    "persistent health load threw: " + ex.GetType().Name + ": " + ex.Message);
+                rows = null;
+            }
+
+            lock (HealthGate)
+            {
+                _healthStore = store;
+                if (rows != null)
+                {
+                    for (int i = 0; i < rows.Count; i++)
+                    {
+                        EndpointHealthRecord r = rows[i];
+                        if (r == null) continue;
+
+                        string key = TelegramDcEndpoint.BuildKey(r.Host, r.Port);
+                        EndpointHealth h = new EndpointHealth
+                        {
+                            DcId = r.DcId,
+                            Family = r.Family,
+                            Failures = r.Failures,
+                            Successes = r.Successes,
+                            LastFailureUtc = r.LastFailureUtc,
+                            LastSuccessUtc = r.LastSuccessUtc,
+                            CooldownUntilUtc = r.CooldownUntilUtc,
+                            LastFailureReason = r.LastFailureReason ?? string.Empty
+                        };
+                        Health[key] = h;
+                    }
+                }
+            }
+
+            EarlyLog.Write(
+                "TelegramDcOptions",
+                "persistent health attached: hydrated=" +
+                (rows != null ? rows.Count : 0));
+        }
+
+        /// <summary>
+        /// Wires a persistent dc_options store and hydrates the in-memory
+        /// snapshot from it. Merging happens at plan-build time
+        /// (<see cref="BuildBuiltInEndpoints"/>), not at attach time, so
+        /// even if attach hasn't completed yet the next plan will pick
+        /// up whatever was successfully loaded.
+        /// </summary>
+        public static async Task AttachPersistentDcOptionsStoreAsync(
+            IDcOptionsStore store,
+            CancellationToken ct)
+        {
+            if (store == null) return;
+
+            List<DcOptionRecord> rows;
+            try
+            {
+                rows = await store.LoadAllAsync(ct).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                EarlyLog.Write(
+                    "TelegramDcOptions",
+                    "persistent dc_options load threw: " +
+                    ex.GetType().Name + ": " + ex.Message);
+                rows = null;
+            }
+
+            lock (DcOptionsGate)
+            {
+                _dcOptionsStore = store;
+                if (rows != null)
+                {
+                    _persistedDcOptions = rows;
+                }
+            }
+
+            EarlyLog.Write(
+                "TelegramDcOptions",
+                "persistent dc_options attached: hydrated=" +
+                (rows != null ? rows.Count : 0));
+        }
+
+        /// <summary>
+        /// Called from the auth_key path after a successful
+        /// <c>help.getConfig</c>. Replaces both the in-memory snapshot
+        /// AND the persisted set in a single transaction. Idempotent.
+        /// </summary>
+        public static async Task ReplaceDcOptionsAsync(
+            IReadOnlyList<DcOptionRecord> records,
+            CancellationToken ct)
+        {
+            if (records == null) return;
+
+            IDcOptionsStore store;
+            lock (DcOptionsGate)
+            {
+                _persistedDcOptions = new List<DcOptionRecord>(records);
+                store = _dcOptionsStore;
+            }
+
+            if (store != null)
+            {
+                try
+                {
+                    await store.ReplaceAllAsync(records, ct).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    EarlyLog.Write(
+                        "TelegramDcOptions",
+                        "persistent dc_options replace threw: " +
+                        ex.GetType().Name + ": " + ex.Message);
+                }
+            }
+
+            EarlyLog.Write(
+                "TelegramDcOptions",
+                "dc_options refreshed in-process count=" + records.Count);
+        }
+
+        /// <summary>
+        /// Snapshot used by <see cref="BuildBuiltInEndpoints"/> to merge
+        /// persisted IPs over the hardcoded plan. Returns a per-DC bucket
+        /// for the requested DC; empty list when nothing is persisted.
+        /// </summary>
+        private static List<DcOptionRecord> GetPersistedFor(int dcId)
+        {
+            lock (DcOptionsGate)
+            {
+                if (_persistedDcOptions == null || _persistedDcOptions.Count == 0)
+                {
+                    return new List<DcOptionRecord>();
+                }
+                List<DcOptionRecord> result = new List<DcOptionRecord>();
+                for (int i = 0; i < _persistedDcOptions.Count; i++)
+                {
+                    DcOptionRecord r = _persistedDcOptions[i];
+                    if (r != null && r.DcId == dcId)
+                    {
+                        result.Add(r);
+                    }
+                }
+                return result;
+            }
+        }
+
+        private static EndpointHealth CloneLocked(EndpointHealth h)
+        {
+            return new EndpointHealth
+            {
+                DcId = h.DcId,
+                Family = h.Family,
+                Failures = h.Failures,
+                Successes = h.Successes,
+                LastFailureUtc = h.LastFailureUtc,
+                LastSuccessUtc = h.LastSuccessUtc,
+                CooldownUntilUtc = h.CooldownUntilUtc,
+                LastFailureReason = h.LastFailureReason ?? string.Empty
+            };
+        }
+
+        private static void FireAndForgetPersist(TelegramDcEndpoint endpoint, EndpointHealth snapshot)
+        {
+            IEndpointHealthStore store = _healthStore;
+            if (store == null || endpoint == null || snapshot == null) return;
+
+            int family = snapshot.Family != 0 ? snapshot.Family : (endpoint.Ipv6 ? 6 : 4);
+            int dcId = snapshot.DcId != 0 ? snapshot.DcId : endpoint.DcId;
+
+            EndpointHealthRecord record = new EndpointHealthRecord(
+                endpoint.Host,
+                endpoint.Port,
+                dcId,
+                family,
+                snapshot.Failures,
+                snapshot.Successes,
+                snapshot.LastFailureUtc,
+                snapshot.LastSuccessUtc,
+                snapshot.CooldownUntilUtc,
+                snapshot.LastFailureReason);
+
+            // Fire-and-forget — the caller (auth_key race) cannot wait on
+            // disk I/O. UpsertAsync uses SqliteDatabase.Gate internally
+            // so concurrent calls from different endpoints are serialised
+            // there. Exceptions are swallowed (logged) to keep the
+            // critical path unaffected if the disk is full or the DB is
+            // locked.
+            Task.Run(async delegate
+            {
+                try
+                {
+                    await store.UpsertAsync(record, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    EarlyLog.Write(
+                        "TelegramDcOptions",
+                        "persistent health upsert threw for " + endpoint.ToString() +
+                        ": " + ex.GetType().Name + ": " + ex.Message);
+                }
+            });
         }
 
         public static string DescribePlan(TelegramDcEndpoint[] endpoints)
@@ -327,13 +684,7 @@ namespace Vianigram.Composition.Configuration
                     return null;
                 }
 
-                return new EndpointHealth
-                {
-                    Failures = health.Failures,
-                    CooldownUntilUtc = health.CooldownUntilUtc,
-                    LastFailureUtc = health.LastFailureUtc,
-                    LastSuccessUtc = health.LastSuccessUtc
-                };
+                return CloneLocked(health);
             }
         }
 
@@ -374,8 +725,8 @@ namespace Vianigram.Composition.Configuration
                 return endpoints;
             }
 
-            AddIpv4(endpoints, 1, new[] { "149.154.175.50" }, ref order);
-            AddIpv4(endpoints, 2, new[] { "149.154.167.51", "95.161.76.100", "149.154.167.50" }, ref order);
+            AddIpv4(endpoints, 1, new[] { "149.154.175.50", "149.154.175.60", "149.154.175.55" }, ref order);
+            AddIpv4(endpoints, 2, new[] { "149.154.167.51", "95.161.76.100", "149.154.167.50", "149.154.167.41" }, ref order);
             AddIpv4(endpoints, 3, new[] { "149.154.175.100" }, ref order);
             AddIpv4(endpoints, 4, new[] { "149.154.167.91" }, ref order);
             AddIpv4(endpoints, 5, new[] { "149.154.171.5", "91.108.56.130" }, ref order);
@@ -385,12 +736,69 @@ namespace Vianigram.Composition.Configuration
             AddIpv6(endpoints, 3, "2001:b28:f23d:f003::a", ref order);
             AddIpv6(endpoints, 4, "2001:67c:4e8:f004::a", ref order);
             AddIpv6(endpoints, 5, "2001:b28:f23f:f005::a", ref order);
+
+            // Merge persisted dc_options from the most recent
+            // help.getConfig response. This is what gives DC#1 (and any
+            // other under-served DC in the hardcoded list) the extra IPs
+            // it needs when the canonical one is unreachable from the
+            // user's network. CDN-only and media-only options are
+            // intentionally skipped — those serve content, not auth.
+            for (int dcId = 1; dcId <= 5; dcId++)
+            {
+                List<DcOptionRecord> persisted = GetPersistedFor(dcId);
+                for (int i = 0; i < persisted.Count; i++)
+                {
+                    DcOptionRecord r = persisted[i];
+                    if (r == null) continue;
+                    if (r.MediaOnly || r.Cdn || r.TcpoOnly) continue;
+
+                    // Skip duplicates already in the hardcoded plan.
+                    bool duplicate = false;
+                    for (int j = 0; j < endpoints.Count; j++)
+                    {
+                        TelegramDcEndpoint existing = endpoints[j];
+                        if (existing.DcId == r.DcId &&
+                            existing.Port == r.Port &&
+                            string.Equals(existing.Host, r.Host, StringComparison.OrdinalIgnoreCase))
+                        {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+                    if (duplicate) continue;
+
+                    endpoints.Add(new TelegramDcEndpoint(
+                        r.DcId,
+                        r.Host,
+                        r.Port,
+                        r.Ipv6,
+                        r.MediaOnly,
+                        r.StaticFlag,
+                        r.ThisPortOnly,
+                        order++));
+                }
+            }
             return endpoints;
         }
 
         private static void AddIpv4(List<TelegramDcEndpoint> endpoints, int dcId, string[] hosts, ref int order)
         {
-            int[] ports = new[] { 443, 80, 5222 };
+            // Port catalogue rationale:
+            //   443  — canonical MTProto-TCP (TLS-wrapped on the wire).
+            //   80   — legitimate fallback for networks that strip 443
+            //          plaintext-handshake bytes; documented in Telegram's
+            //          public MTProto transport notes.
+            //   5222 — REMOVED. That port is IANA-assigned to XMPP and was
+            //          never an official MTProto endpoint. Live logs from
+            //          the WP 8.1 emulator on a typical mobile/ISP network
+            //          show every 5222 candidate timing out (16 s each)
+            //          which dragged the staggered auth_key race up to
+            //          ~24 s before any 443 candidate could win. Removing
+            //          it caps the worst-case race wall time without
+            //          changing the success path. If a future device
+            //          actually needs a non-443/80 transport, prefer the
+            //          MTProto websocket transport over hard-coding 5222.
+            int[] ports = new[] { 443, 80 };
             for (int p = 0; p < ports.Length; p++)
             {
                 for (int h = 0; h < hosts.Length; h++)
@@ -426,10 +834,14 @@ namespace Vianigram.Composition.Configuration
 
         private sealed class EndpointHealth
         {
+            public int DcId;
+            public int Family;              // 4 or 6
             public int Failures;
+            public int Successes;
             public DateTime CooldownUntilUtc;
             public DateTime LastFailureUtc;
             public DateTime LastSuccessUtc;
+            public string LastFailureReason;
         }
 
         private sealed class PhoneDcRule

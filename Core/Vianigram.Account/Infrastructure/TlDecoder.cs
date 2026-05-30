@@ -30,6 +30,11 @@ namespace Vianigram.Account.Infrastructure
         public const uint RpcError = 0x2144ca19;
         public const uint BoolTrue = 0x997275b5;
         public const uint BoolFalse = 0xbc799737;
+        public const uint UserA = 0x83314fcau;
+        public const uint UserB = 0x83314faeu;
+        public const uint User214 = 0x020b1422u;
+        public const uint UserEmpty = 0xd3bc4b7au;
+        private const long MaxReasonableTelegramUserId = 100000000000000L;
 
         // Subtypes inside auth.sentCode.type:
         public const uint SentCodeTypeApp = 0x3dbb5986;
@@ -76,6 +81,44 @@ namespace Vianigram.Account.Infrastructure
             public int ErrorCode;
             public string ErrorMessage;
         }
+
+        /// <summary>
+        /// Single dc_options entry. Fields mirror the TL definition
+        /// <c>dcOption#18b7a10d</c> documented at
+        /// <see href="https://core.telegram.org/api/datacenter"/>.
+        /// Secret (transport-obfuscation key) is included when the
+        /// server sets flag bit 10.
+        /// </summary>
+        public sealed class DcOptionDecoded
+        {
+            public bool Ipv6;
+            public bool MediaOnly;
+            public bool TcpoOnly;
+            public bool Cdn;
+            public bool StaticFlag;
+            public bool ThisPortOnly;
+            public int DcId;
+            public string IpAddress;
+            public int Port;
+            public byte[] Secret;
+        }
+
+        public sealed class ConfigDecoded
+        {
+            public int ThisDc;
+            public int Date;
+            public int Expires;
+            public bool TestMode;
+            public DcOptionDecoded[] DcOptions;
+        }
+
+        // dcOption#18b7a10d ctor id is stable across all recent layers
+        // (verified against core.telegram.org/schema). The outer config
+        // ctor changes whenever Telegram bumps the layer; we accept any
+        // ctor since we only care about the prefix that locates
+        // dc_options.
+        public const uint DcOptionCtor = 0x18b7a10du;
+        public const uint VectorCtor = 0x1cb5c415u;
 
         public static uint PeekConstructor(byte[] response)
         {
@@ -129,6 +172,12 @@ namespace Vianigram.Account.Infrastructure
                 return null;
             }
 
+            long scannedUserId;
+            if (TryFindAuthorizationUserId(response, out scannedUserId))
+            {
+                return new AuthorizationDecoded { SignupRequired = false, UserId = scannedUserId };
+            }
+
             using (var ms = new MemoryStream(response))
             {
                 ReadUInt(ms); // ctor
@@ -139,9 +188,13 @@ namespace Vianigram.Account.Infrastructure
 
                 // user:User — we only need the id field (long). User constructor is variable;
                 // reading the constructor + flags + id long is sufficient for a lightweight hint.
-                uint userCtor = ReadUInt(ms);
-                int userFlags = ReadInt(ms);
+                ReadUInt(ms); // user ctor
+                ReadInt(ms);  // user flags
                 long userId = ReadLong(ms);
+                if (!IsReasonableUserId(userId))
+                {
+                    return null;
+                }
 
                 return new AuthorizationDecoded { SignupRequired = false, UserId = userId };
             }
@@ -204,6 +257,103 @@ namespace Vianigram.Account.Infrastructure
                 };
             }
         }
+
+        /// <summary>
+        /// Decode a <c>config</c> response from <c>help.getConfig</c>.
+        /// Permissive on the outer constructor: Telegram bumps the
+        /// <c>config</c> ctor whenever the layer adds new fields, but the
+        /// prefix layout (<c>flags:# date:int expires:int test_mode:Bool
+        /// this_dc:int dc_options:Vector&lt;DcOption&gt;</c>) has been
+        /// stable since layer 122+. We stop reading once dc_options has
+        /// been consumed — every field after that is irrelevant to the
+        /// connection plan and would only make the decoder brittle.
+        ///
+        /// Returns null on any structural failure (truncated payload,
+        /// unknown DcOption ctor, vector ctor mismatch). The caller is
+        /// expected to treat null as "skip the dc_options refresh this
+        /// time" — the persisted snapshot from a prior call (or the
+        /// hardcoded plan) remains in effect.
+        /// </summary>
+        public static ConfigDecoded DecodeConfig(byte[] response)
+        {
+            if (response == null || response.Length < 24) return null;
+
+            try
+            {
+                using (var ms = new MemoryStream(response))
+                {
+                    // Outer ctor — accept any value. The TL constructor
+                    // for config changes per layer (cc1a241e / 330b4067 /
+                    // 9c840964 / ...). The dc_options prefix is what
+                    // matters. We read and discard.
+                    ReadUInt(ms);
+                    // Flag bits gate optional trailing fields we do not
+                    // consume; we still read the four bytes.
+                    ReadInt(ms);
+
+                    int date = ReadInt(ms);
+                    int expires = ReadInt(ms);
+
+                    uint testModeCtor = ReadUInt(ms);
+                    bool testMode = testModeCtor == BoolTrue;
+
+                    int thisDc = ReadInt(ms);
+
+                    uint vecCtor = ReadUInt(ms);
+                    if (vecCtor != VectorCtor) return null;
+
+                    int count = ReadInt(ms);
+                    if (count < 0 || count > 1024) return null; // sanity bound
+
+                    DcOptionDecoded[] opts = new DcOptionDecoded[count];
+                    for (int i = 0; i < count; i++)
+                    {
+                        uint optCtor = ReadUInt(ms);
+                        if (optCtor != DcOptionCtor) return null;
+
+                        int optFlags = ReadInt(ms);
+                        int dcId = ReadInt(ms);
+                        string ip = ReadString(ms);
+                        int port = ReadInt(ms);
+
+                        byte[] secret = null;
+                        // bit 10: secret:flags.10?bytes
+                        if ((optFlags & (1 << 10)) != 0)
+                        {
+                            secret = ReadBytes(ms);
+                        }
+
+                        opts[i] = new DcOptionDecoded
+                        {
+                            Ipv6         = (optFlags & (1 << 0)) != 0,
+                            MediaOnly    = (optFlags & (1 << 1)) != 0,
+                            TcpoOnly     = (optFlags & (1 << 2)) != 0,
+                            Cdn          = (optFlags & (1 << 3)) != 0,
+                            StaticFlag   = (optFlags & (1 << 4)) != 0,
+                            ThisPortOnly = (optFlags & (1 << 5)) != 0,
+                            DcId = dcId,
+                            IpAddress = ip,
+                            Port = port,
+                            Secret = secret
+                        };
+                    }
+
+                    return new ConfigDecoded
+                    {
+                        ThisDc = thisDc,
+                        Date = date,
+                        Expires = expires,
+                        TestMode = testMode,
+                        DcOptions = opts
+                    };
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
 
         // ---- Primitives ----
 
@@ -282,6 +432,71 @@ namespace Vianigram.Account.Infrastructure
         {
             byte[] bytes = ReadBytes(s);
             return Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+        }
+
+        private static bool TryFindAuthorizationUserId(byte[] response, out long userId)
+        {
+            userId = 0L;
+            if (response == null) return false;
+
+            for (int i = 0; i + 4 <= response.Length; i += 4)
+            {
+                uint ctor = ReadUIntAt(response, i);
+                try
+                {
+                    if (ctor == UserEmpty)
+                    {
+                        if (i + 12 > response.Length) continue;
+                        long emptyId = ReadLongAt(response, i + 4);
+                        if (IsReasonableUserId(emptyId))
+                        {
+                            userId = emptyId;
+                            return true;
+                        }
+                    }
+                    else if (ctor == UserA || ctor == UserB || ctor == User214)
+                    {
+                        if (i + 20 > response.Length) continue;
+                        long id = ReadLongAt(response, i + 12); // ctor + flags + flags2
+                        if (IsReasonableUserId(id))
+                        {
+                            userId = id;
+                            return true;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Keep scanning; auth.authorization can carry optional fields
+                    // before the user object and we only need one valid user id.
+                }
+            }
+
+            return false;
+        }
+
+        private static uint ReadUIntAt(byte[] bytes, int offset)
+        {
+            return (uint)(bytes[offset]
+                | (bytes[offset + 1] << 8)
+                | (bytes[offset + 2] << 16)
+                | (bytes[offset + 3] << 24));
+        }
+
+        private static long ReadLongAt(byte[] bytes, int offset)
+        {
+            long acc = 0L;
+            for (int i = 0; i < 8; i++)
+            {
+                acc |= ((long)bytes[offset + i]) << (8 * i);
+            }
+
+            return acc;
+        }
+
+        private static bool IsReasonableUserId(long userId)
+        {
+            return userId > 0L && userId <= MaxReasonableTelegramUserId;
         }
 
         private static SentCodeType MapSentCodeType(uint ctor)

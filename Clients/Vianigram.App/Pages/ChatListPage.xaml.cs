@@ -235,6 +235,20 @@ namespace Vianigram.App.Pages
         {
             if (_vm == null || sender == null || args == null) return;
             if (args.InRecycleQueue) return;
+
+            // Lazy-fetch trigger: this is the FIRST place we know the
+            // row is actually about to paint on screen. DialogRow.RequestAvatar()
+            // is idempotent — the row's _avatarRequested flag flips on the
+            // first call and ignores subsequent realisations (which happen
+            // on every scroll-recycle round-trip even though the row is
+            // the same instance). On a 4G Lumia this drops the cold-start
+            // RPC fan-out from "all ~30 rows immediately" to "the 6 rows
+            // visible in the first viewport plus whatever the user scrolls
+            // to," which is the single biggest contributor to the ~5 s of
+            // post-login avatar wall time.
+            var row = args.Item as DialogRow;
+            if (row != null) row.RequestAvatar();
+
             var coll = sender.ItemsSource as System.Collections.ICollection;
             if (coll == null) return;
             int total = coll.Count;

@@ -69,6 +69,7 @@
     <Compile Include="Infrastructure\DeferredMtProtoUpdatesPort.cs" />
     <Compile Include="Infrastructure\AccountLoginMtProtoRpcPort.cs" />
     <Compile Include="Infrastructure\MtProtoChannelAdapter.cs" />
+    <Compile Include="Infrastructure\MtProtoChannelAdapter.MediaDc.cs" />
     <Compile Include="Infrastructure\MtProtoChannelAdapter.AdditionalContexts.cs" />
     <Compile Include="Infrastructure\MtProtoChannelAdapter.TypedStubs.cs" />
     <Compile Include="Infrastructure\TlByteBuilder.cs" />
@@ -178,19 +179,21 @@
       <Project>{B1C2D3E4-F5A6-47B8-9C0D-1E2F3A4B5C6D}</Project>
       <Name>Vianium.Core.Crypto.WinRT</Name>
       <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-      <Private>true</Private>
+      <!-- AppX packaging gets native VC outputs from the project graph; keeping
+           them copy-local here duplicates PDB payloads from Composition\bin. -->
+      <Private>false</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\..\vianium-mtproto\Vianium.Tl.vcxproj">
       <Project>{D2E3F4A5-B6C7-4D8E-9F01-A2B3C4D5E6F7}</Project>
       <Name>Vianium.Tl</Name>
       <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-      <Private>true</Private>
+      <Private>false</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\..\vianium-mtproto\Vianium.MTProto.vcxproj">
       <Project>{D3E4F5A6-B7C8-4D9E-9F01-A3B4C5D6E7F8}</Project>
       <Name>Vianium.MTProto</Name>
       <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-      <Private>true</Private>
+      <Private>false</Private>
     </ProjectReference>
     <!-- Vianium.MtProxy WinRT projection — consumed by MtProxyProbe to
          run the live handshake test from the proxy settings page. The
@@ -202,13 +205,13 @@
       <Project>{C8D9E0F1-A2B3-4C4D-5E6F-7A8B9C0D1E2F}</Project>
       <Name>Vianium.MtProxy</Name>
       <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-      <Private>true</Private>
+      <Private>false</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\..\vianium-voip\VianiumVoIP.vcxproj">
       <Project>{E5F6A7B8-C9DA-4DBE-9F24-D6E7F8A9BBC1}</Project>
       <Name>VianiumVoIP</Name>
       <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-      <Private>true</Private>
+      <Private>false</Private>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">

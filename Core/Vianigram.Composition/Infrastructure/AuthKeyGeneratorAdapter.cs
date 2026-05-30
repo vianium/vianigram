@@ -25,6 +25,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Vianigram.Account.Domain.Errors;
 using Vianigram.Account.Ports.Outbound;
+using Vianigram.Kernel.Logging;
 using Vianigram.Kernel.Result;
 
 namespace Vianigram.Composition.Infrastructure
@@ -54,12 +55,21 @@ namespace Vianigram.Composition.Infrastructure
 
             Vianigram.MTProto.MtProtoConnection conn = null;
             Vianigram.MTProto.AuthKeyResult result = null;
+            // Track which phase we were in when cancellation came in.
+            // If cancellation hits during the TCP ConnectWithDcAsync the
+            // native MtProtoConnection has no LastDiagnostic yet (it
+            // isn't constructed until the connect succeeds), so the
+            // OCE handler below would emit an empty last_step. This
+            // managed-side breadcrumb fills the gap so the log always
+            // shows where we stalled.
+            string phaseBreadcrumb = "tcp connect " + host + ":" + port;
             try
             {
                 conn = await Vianigram.MTProto.MtProtoConnection
-                    .ConnectWithDcAsync(host, port, dcId > 0 ? dcId : 2)
+                    .ConnectWithDcAsync(host, port, dcId != 0 ? dcId : 2)
                     .AsTask(ct)
                     .ConfigureAwait(false);
+                phaseBreadcrumb = "dh handshake against " + host + ":" + port;
 
                 if (conn == null)
                 {
@@ -80,10 +90,19 @@ namespace Vianigram.Composition.Infrastructure
 
                 if (!result.Success)
                 {
+                    string diagnostic = null;
+                    try { diagnostic = conn.LastDiagnostic; }
+                    catch { diagnostic = null; }
+
+                    string detail = string.IsNullOrEmpty(result.ErrorMessage)
+                        ? "DH handshake failed (no detail)."
+                        : result.ErrorMessage;
+                    if (!string.IsNullOrEmpty(diagnostic))
+                    {
+                        detail = detail + " | last_step=" + diagnostic;
+                    }
                     return Result<AuthKeyRecord, AccountError>.Fail(
-                        AccountError.NetworkError(string.IsNullOrEmpty(result.ErrorMessage)
-                            ? "DH handshake failed (no detail)."
-                            : result.ErrorMessage));
+                        AccountError.NetworkError(detail));
                 }
 
                 if (result.AuthKeyBytes == null || result.AuthKeyBytes.Length != 256)
@@ -99,16 +118,68 @@ namespace Vianigram.Composition.Infrastructure
                     ServerSalt = result.InitialServerSalt,
                     ServerTimeOffset = result.ServerTimeOffset
                 };
+
+                // Perf summary breadcrumb. The native handshake stamps a
+                // tabular per-step breakdown into LastDiagnostic on its
+                // final ReportProgress("perf_summary: ..."). Pull it out
+                // and emit through EarlyLog so users can profile a real
+                // device run without attaching a debugger.
+                try
+                {
+                    string diagnostic = conn.LastDiagnostic;
+                    if (!string.IsNullOrEmpty(diagnostic) &&
+                        diagnostic.StartsWith("perf_summary:", StringComparison.Ordinal))
+                    {
+                        EarlyLog.Write(
+                            "Account.LoginMTProto",
+                            "auth_key " + diagnostic +
+                            " endpoint=" + host + ":" + port);
+                    }
+                }
+                catch { /* perf log best-effort */ }
+
                 return Result<AuthKeyRecord, AccountError>.Ok(record);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException oce)
             {
+                // Cancellation usually comes from the caller's timeout
+                // wrapper. Capture the last handshake-step diagnostic
+                // (e.g. "step2 read resPQ") BEFORE the finally below
+                // closes the connection — the caller (timeout path of
+                // GenerateAuthKeyWithDeadlineAsync) can then read it
+                // from Exception.Data["last_step"] and include it in
+                // the surfaced error message.
+                string lastStep = phaseBreadcrumb;
+                try
+                {
+                    if (conn != null)
+                    {
+                        string diagnostic = conn.LastDiagnostic;
+                        if (!string.IsNullOrEmpty(diagnostic))
+                        {
+                            lastStep = diagnostic;
+                        }
+                    }
+                }
+                catch { /* diagnostic best-effort */ }
+                if (!string.IsNullOrEmpty(lastStep))
+                {
+                    oce.Data["last_step"] = lastStep;
+                }
                 throw;
             }
             catch (Exception ex)
             {
+                string diagnostic = null;
+                try { if (conn != null) diagnostic = conn.LastDiagnostic; }
+                catch { diagnostic = null; }
+                string detail = ex.GetType().Name + ": " + ex.Message;
+                if (!string.IsNullOrEmpty(diagnostic))
+                {
+                    detail += " | last_step=" + diagnostic;
+                }
                 return Result<AuthKeyRecord, AccountError>.Fail(
-                    AccountError.NetworkError(ex.GetType().Name + ": " + ex.Message, ex));
+                    AccountError.NetworkError(detail, ex));
             }
             finally
             {

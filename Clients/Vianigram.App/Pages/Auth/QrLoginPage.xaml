@@ -95,8 +95,8 @@
                            Margin="18,0,18,24" />
 
                 <Grid x:Name="QrFadeRoot"
-                      Width="242"
-                      Height="242"
+                      Width="304"
+                      Height="304"
                       HorizontalAlignment="Center"
                       Margin="0,0,0,20">
                     <Border Background="#FFFFFFFF"
@@ -104,7 +104,7 @@
                             BorderThickness="1" />
 
                     <controls:QrCodeCanvas Text="{Binding QrText, Mode=OneWay}"
-                                           QuietZoneModules="4"
+                                           QuietZoneModules="5"
                                            HorizontalAlignment="Stretch"
                                            VerticalAlignment="Stretch">
                         <controls:QrCodeCanvas.ModuleBrush>
@@ -114,13 +114,6 @@
                             <SolidColorBrush Color="#FFFFFFFF" />
                         </controls:QrCodeCanvas.LightBrush>
                     </controls:QrCodeCanvas>
-
-                    <ProgressRing IsActive="{Binding IsBusy, Mode=OneWay}"
-                                  Width="42"
-                                  Height="42"
-                                  Foreground="{ThemeResource VgAccentBrush}"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center" />
                 </Grid>
 
                 <!-- Status: countdown text "Waiting for scan… 23s." while
@@ -158,12 +151,18 @@
             </StackPanel>
         </ScrollViewer>
 
-        <Button x:Uid="QrLoginUsePhoneButton"
-                Grid.Row="2"
-                Content="use phone number"
-                Command="{Binding UsePhoneCommand}"
-                Style="{StaticResource QrLinkButtonStyle}"
-                HorizontalAlignment="Center"
-                Margin="0,8,0,18" />
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,8,0,18">
+            <Button x:Uid="QrLoginUsePhoneButton"
+                    Content="use phone number"
+                    Command="{Binding UsePhoneCommand}"
+                    Style="{StaticResource QrLinkButtonStyle}" />
+            <Button x:Uid="QrLoginProxyButton"
+                    Content="MTProxy"
+                    Command="{Binding ProxyCommand}"
+                    Style="{StaticResource QrLinkButtonStyle}" />
+        </StackPanel>
     </Grid>
 </Page>

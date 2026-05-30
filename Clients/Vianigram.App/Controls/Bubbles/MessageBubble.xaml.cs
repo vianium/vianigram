@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.UI;
 using Windows.UI.Text;
 using Windows.UI.Xaml;
@@ -176,7 +177,15 @@ namespace Vianigram.App.Controls.Bubbles
         public MessageBubble()
         {
             InitializeComponent();
+            BubbleInteractionHelpers.EnableTextSelection(MessageTextBlock);
+            BubbleInteractionHelpers.EnableTextSelection(ReplyAuthorText);
+            BubbleInteractionHelpers.EnableTextSelection(ReplyPreviewTextBlock);
             MessageTextBlock.Tapped += MessageTextBlock_Tapped;
+            if (RootGrid != null)
+            {
+                RootGrid.Holding += OnBubbleHolding;
+                RootGrid.RightTapped += OnBubbleRightTapped;
+            }
             ApplyText();
             ApplyDirection();
             ApplyReply();
@@ -291,6 +300,35 @@ namespace Vianigram.App.Controls.Bubbles
             if (handler != null) handler(this, EventArgs.Empty);
         }
 
+        private void OnBubbleHolding(object sender, HoldingRoutedEventArgs e)
+        {
+            if (e == null || e.HoldingState != Windows.UI.Input.HoldingState.Started) return;
+            if (BubbleInteractionHelpers.IsFrom(MessageTextBlock, e.OriginalSource) ||
+                BubbleInteractionHelpers.IsFrom(ReplyAuthorText, e.OriginalSource) ||
+                BubbleInteractionHelpers.IsFrom(ReplyPreviewTextBlock, e.OriginalSource))
+                return;
+
+            ShowCopyMenu();
+            e.Handled = true;
+        }
+
+        private void OnBubbleRightTapped(object sender, RightTappedRoutedEventArgs e)
+        {
+            ShowCopyMenu();
+            if (e != null) e.Handled = true;
+        }
+
+        private void ShowCopyMenu()
+        {
+            string text = MessageText ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            BubbleInteractionHelpers.ShowCopyTextFlyout(
+                BubbleBorder != null ? (FrameworkElement)BubbleBorder : this,
+                text,
+                "Copy message");
+        }
+
         private static string MapDeliveryState(string state)
         {
             switch (state ?? string.Empty)
@@ -302,6 +340,109 @@ namespace Vianigram.App.Controls.Bubbles
                 case "Failed": return "!";
                 default: return string.Empty;
             }
+        }
+    }
+
+    internal static class BubbleInteractionHelpers
+    {
+        private static bool _clipboardResolved;
+        private static MethodInfo _setClipboardContent;
+
+        public static void EnableTextSelection(TextBlock textBlock)
+        {
+            if (textBlock == null) return;
+
+            try
+            {
+                PropertyInfo property = textBlock.GetType().GetRuntimeProperty("IsTextSelectionEnabled");
+                if (property != null && property.CanWrite)
+                    property.SetValue(textBlock, true);
+            }
+            catch
+            {
+            }
+        }
+
+        public static bool CopyText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+
+            try
+            {
+                MethodInfo setContent = ResolveClipboardSetContent();
+                if (setContent == null) return false;
+
+                var package = new DataPackage();
+                package.SetText(text);
+                setContent.Invoke(null, new object[] { package });
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static void ShowCopyTextFlyout(FrameworkElement anchor, string text, string label)
+        {
+            if (anchor == null) return;
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            try
+            {
+                var flyout = new MenuFlyout();
+                var copy = new MenuFlyoutItem { Text = string.IsNullOrEmpty(label) ? "Copy" : label };
+                copy.Click += delegate { CopyText(text); };
+                flyout.Items.Add(copy);
+                flyout.ShowAt(anchor);
+            }
+            catch
+            {
+                CopyText(text);
+            }
+        }
+
+        public static bool IsFrom(DependencyObject root, object source)
+        {
+            if (root == null || source == null) return false;
+
+            DependencyObject current = source as DependencyObject;
+            while (current != null)
+            {
+                if (ReferenceEquals(current, root)) return true;
+                try { current = VisualTreeHelper.GetParent(current); }
+                catch { return false; }
+            }
+
+            return false;
+        }
+
+        private static MethodInfo ResolveClipboardSetContent()
+        {
+            if (_clipboardResolved) return _setClipboardContent;
+            _clipboardResolved = true;
+
+            try
+            {
+                Type clipboardType = Type.GetType(
+                    "Windows.ApplicationModel.DataTransfer.Clipboard, Windows, ContentType=WindowsRuntime");
+                if (clipboardType == null) return null;
+
+                foreach (MethodInfo method in clipboardType.GetTypeInfo().DeclaredMethods)
+                {
+                    if (method != null && method.Name == "SetContent")
+                    {
+                        _setClipboardContent = method;
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+                _setClipboardContent = null;
+            }
+
+            return _setClipboardContent;
         }
     }
 

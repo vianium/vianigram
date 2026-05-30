@@ -130,6 +130,12 @@ namespace Vianigram.SmokeTests
                 () => PeerCacheSmokeTest.RunAsync(ct),
                 ct);
 
+            var qrLoginSuite = BeginSuiteOnWorkerAsync(
+                "QrLogin",
+                "QrLogin.RunAll",
+                () => QrLoginCompatibilitySmokeTest.RunAsync(ct),
+                ct);
+
             var proxyConfigSuite = BeginSuiteOnWorkerAsync(
                 "ProxyConfig",
                 "ProxyConfig.RunAll",
@@ -204,6 +210,7 @@ namespace Vianigram.SmokeTests
                 ct);
 
             await CompleteSuiteAsync(summary, localSuite).ConfigureAwait(false);
+            await CompleteSuiteAsync(summary, qrLoginSuite).ConfigureAwait(false);
             await CompleteSuiteAsync(summary, proxyConfigSuite).ConfigureAwait(false);
             await CompleteSuiteAsync(summary, mtProxyRuntimeSuite).ConfigureAwait(false);
             await CompleteSuiteAsync(summary, proxyPersistenceSuite).ConfigureAwait(false);

@@ -19,9 +19,9 @@
 //      <PollIntervalSeconds>). Polling and refresh are serialized via
 //      _isLoadingQr / _pendingRefresh flags so a slow RPC never lets
 //      two requests race.
-//   3) When the token is <= RefreshLeadSeconds from server-side expiry
-//      the VM proactively re-issues exportLoginToken, replacing the
-//      visible QR with a fresh one before the old code would have
+//   3) When the token is <= RefreshLeadSeconds from its local visible
+//      deadline the VM proactively re-issues exportLoginToken, replacing
+//      the visible QR with a fresh one before the old code would have
 //      stopped working.
 //   4) Status transitions (handled in ApplyPollResult):
 //        - Pending          → countdown ticking, "Waiting for scan… 23s".
@@ -65,16 +65,56 @@ namespace Vianigram.App.ViewModels.Pages
         private const int PollIntervalSeconds = 4;
 
         // Ask for a fresh token a few seconds before the current one
-        // expires so the user never sees a stale QR. Telegram tokens last
-        // ~30 seconds; 5s of lead gives a generous margin even on slow
-        // networks.
-        private const int RefreshLeadSeconds = 5;
+        // expires so the user never sees a stale QR. Telegram tokens
+        // last ~30 seconds. Bumped from 5s → 8s in tandem with the
+        // cache-first auth_key reuse policy in
+        // AccountLoginMtProtoRpcPort (see "QR anonymous start: deferring
+        // to cache-first policy"). With force-regen gone, refresh
+        // typically resolves in well under 1s on a warm DC, so the
+        // extra 3s of lead is pure cushion against intermittent
+        // network blips — no UX cost.
+        private const int RefreshLeadSeconds = 8;
+
+        // Old phones can have a skewed UTC clock. If we trust only the
+        // absolute server expiry, a QR token can look valid for almost an
+        // hour while Telegram actually expires it after a short window.
+        // Cap the visible lifetime locally so both Android and iOS scan a
+        // fresh token.
+        private const int MaxVisibleTokenLifetimeSeconds = 28;
 
         // After this many consecutive RPC failures we stop the loop and
         // show a retry button. The user is much better served by a clear
         // "we lost the network" surface than by silent infinite retries
         // on a loaded battery.
         private const int RetryStreakLimit = 3;
+
+        // After this many consecutive "no route to host" failures we
+        // assume the user's network is blocking Telegram entirely (most
+        // commonly: an ISP that filters Telegram DCs by IP, or a corporate
+        // network behind a firewall that allows the first DC but blocks
+        // the user's home DC after migrate). Trigger a distinct UX surface
+        // that explains the situation and offers phone login / proxy
+        // configuration — much more useful than the generic "retry"
+        // button on a fundamentally broken path.
+        private const int NetworkUnreachableLimit = 1;
+
+        // Substrings that, when seen in an RPC failure message, classify
+        // the failure as "network has no route to this Telegram DC". Kept
+        // in sync with AccountLoginMtProtoRpcPort.IsHardNetworkFailure
+        // (any change there should be mirrored here).
+        private static readonly string[] UnreachableMarkers = new[]
+        {
+            "unreachable",
+            "WSAEHOSTUNREACH",
+            "WSAENETUNREACH",
+            "0x80072751",
+            "0x80072743",
+            "connection refused",
+            "WSAECONNREFUSED",
+            "no such host",
+            "timed out",
+            "login connection could not be opened"
+        };
 
         private readonly IAccountApi _account;
         private readonly INavigationService _nav;
@@ -87,11 +127,16 @@ namespace Vianigram.App.ViewModels.Pages
         private bool _showRetry;
         private bool _isLoadingQr;
         private bool _pendingRefresh;
+        private bool _isNetworkUnreachable;
         private int _consecutiveFailures;
+        private int _consecutiveUnreachableFailures;
         private int _navigateGuard;     // 0 = active, 1 = pivoted away (Accepted/2FA)
         private int _prewarmStarted;    // 0 = not yet, 1 = scheduled/running
+        private int _pollInFlight;      // 0 = idle, 1 = a poll/import is running
+        private int _refreshDeferredForPollLogged;
 
         private QrLoginToken _currentToken;
+        private DateTimeOffset _currentTokenVisibleUntilUtc;
         private CancellationTokenSource _cts;
         private CancellationTokenSource _prewarmCts;
 
@@ -114,6 +159,7 @@ namespace Vianigram.App.ViewModels.Pages
             RefreshCommand = new AsyncCommand(RefreshAsync, _ => CanRefresh);
             RetryCommand = new AsyncCommand(_ => OnRetryAsync(), _ => _showRetry);
             UsePhoneCommand = new RelayCommand(OnUsePhone);
+            ProxyCommand = new RelayCommand(OnProxy);
         }
 
         /// <summary>Raised after a successful QR login (Accepted) so the
@@ -157,6 +203,20 @@ namespace Vianigram.App.ViewModels.Pages
             }
         }
 
+        /// <summary>
+        /// Set when consecutive RPC failures classify as "no route to
+        /// Telegram DC". Bindings can show a distinct surface
+        /// (e.g. "Tu red parece bloquear Telegram") with prominent
+        /// alternatives (phone login, proxy configuration) instead of
+        /// the generic retry. When true, ShowRetry is also true (retry
+        /// still works in case the network recovers).
+        /// </summary>
+        public bool IsNetworkUnreachable
+        {
+            get { return _isNetworkUnreachable; }
+            private set { SetProperty(ref _isNetworkUnreachable, value); }
+        }
+
         public bool CanRefresh
         {
             get { return !_isLoadingQr; }
@@ -165,6 +225,7 @@ namespace Vianigram.App.ViewModels.Pages
         public AsyncCommand RefreshCommand { get; private set; }
         public ICommand RetryCommand { get; private set; }
         public ICommand UsePhoneCommand { get; private set; }
+        public ICommand ProxyCommand { get; private set; }
 
         public void OnNavigatedTo(object parameter)
         {
@@ -182,7 +243,7 @@ namespace Vianigram.App.ViewModels.Pages
 
             try
             {
-                await Task.Delay(750).ConfigureAwait(true);
+                await Task.Delay(150).ConfigureAwait(true);
             }
             catch
             {
@@ -251,6 +312,13 @@ namespace Vianigram.App.ViewModels.Pages
         {
             if (Volatile.Read(ref _navigateGuard) != 0) return;
 
+            if (Volatile.Read(ref _pollInFlight) != 0)
+            {
+                _pendingRefresh = true;
+                EarlyLog.Write("App.QrLogin", "Refresh queued (poll/import in flight)");
+                return;
+            }
+
             // Serialize: if a refresh is already in flight, queue a single
             // pending refresh so we re-run once it completes. The
             // _isLoadingQr / _pendingRefresh pair prevents the manual
@@ -314,8 +382,11 @@ namespace Vianigram.App.ViewModels.Pages
                     // DcMigrationRequired: the underlying transport already
                     // tried to follow the migration; if it surfaced here the
                     // first attempt failed. Treat as a generic failure and
-                    // let the streak counter take it from there.
-                    BumpFailureStreak();
+                    // let the streak counter take it from there. The error
+                    // is forwarded so the unreachable detector can engage
+                    // its distinct UX surface fast when the migrate
+                    // target is on a blocked /16.
+                    BumpFailureStreak(result.Error);
                     return;
                 }
 
@@ -335,10 +406,18 @@ namespace Vianigram.App.ViewModels.Pages
                 _isLoadingQr = false;
                 RaiseCommandStates();
 
-                // If the page is still alive and we have a token, restart
+                // If the page is still alive AND we have a token AND we
+                // are not in a terminal retry/unreachable surface, restart
                 // the per-second tick that drives polling and the visible
-                // countdown.
-                if (Volatile.Read(ref _navigateGuard) == 0 && _currentToken != null)
+                // countdown. The ShowRetry guard fixes the bug where a
+                // failed refresh that triggered BumpFailureStreak (which
+                // calls Stop) would have its `Start` undone right here,
+                // causing OnTimerTick to fire a Pre-empt refresh seconds
+                // after we logged "Retry-streak limit reached".
+                if (Volatile.Read(ref _navigateGuard) == 0 &&
+                    _currentToken != null &&
+                    !_showRetry &&
+                    !_isNetworkUnreachable)
                 {
                     _timer.Start();
                 }
@@ -346,8 +425,13 @@ namespace Vianigram.App.ViewModels.Pages
                 if (_pendingRefresh)
                 {
                     _pendingRefresh = false;
-                    EarlyLog.Write("App.QrLogin", "Replaying queued refresh");
-                    var ignored = RefreshAsync(null);
+                    if (Volatile.Read(ref _navigateGuard) == 0 &&
+                        !_showRetry &&
+                        !_isNetworkUnreachable)
+                    {
+                        EarlyLog.Write("App.QrLogin", "Replaying queued refresh");
+                        var ignored = RefreshAsync(null);
+                    }
                 }
             }
         }
@@ -364,18 +448,43 @@ namespace Vianigram.App.ViewModels.Pages
                 return;
             }
 
+            // Belt-and-braces: even though both RefreshAsync.finally and
+            // BumpFailureStreak now respect these flags, the timer may
+            // already be in flight when one of them set ShowRetry. Bail
+            // here so we never fire a Pre-empt refresh after the user
+            // has been parked on the retry surface.
+            if (_showRetry || _isNetworkUnreachable)
+            {
+                _timer.Stop();
+                return;
+            }
+
             if (_currentToken == null)
             {
                 return;
             }
 
             int secondsLeft = GetSecondsUntilExpiry();
+            if (secondsLeft <= RefreshLeadSeconds &&
+                Volatile.Read(ref _pollInFlight) != 0)
+            {
+                _pendingRefresh = true;
+                if (Interlocked.Exchange(ref _refreshDeferredForPollLogged, 1) == 0)
+                {
+                    EarlyLog.Write(
+                        "App.QrLogin",
+                        "Pre-empt refresh deferred (poll/import in flight) secondsLeft=" +
+                        secondsLeft);
+                }
+                StatusText = Strings.Get("QrLoginStatusLinking");
+                return;
+            }
 
             if (secondsLeft <= RefreshLeadSeconds)
             {
-                // Pre-emptive refresh — token is about to expire on the
-                // server. Stop ticking and fire a refresh; the refresh
-                // restarts the timer once it has a fresh token.
+                // Pre-emptive refresh — token is about to reach its local
+                // visible deadline. Stop ticking and fire a refresh; the
+                // refresh restarts the timer once it has a fresh token.
                 EarlyLog.Write(
                     "App.QrLogin",
                     "Pre-empt refresh: secondsLeft=" + secondsLeft);
@@ -411,7 +520,14 @@ namespace Vianigram.App.ViewModels.Pages
         {
             if (Volatile.Read(ref _navigateGuard) != 0) return;
             if (_currentToken == null) return;
+            if (Interlocked.Exchange(ref _pollInFlight, 1) != 0)
+            {
+                EarlyLog.Write("App.QrLogin", "Poll skipped (previous poll still in flight)");
+                return;
+            }
 
+            try
+            {
             QrLoginToken snapshot = _currentToken;
             CancellationToken ct = _cts != null ? _cts.Token : CancellationToken.None;
 
@@ -462,11 +578,26 @@ namespace Vianigram.App.ViewModels.Pages
                     return;
                 }
 
-                BumpFailureStreak();
+                BumpFailureStreak(result.Error);
                 return;
             }
 
             ApplyPollResult(result.Value);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _pollInFlight, 0);
+                Interlocked.Exchange(ref _refreshDeferredForPollLogged, 0);
+                if (_pendingRefresh &&
+                    Volatile.Read(ref _navigateGuard) == 0 &&
+                    !_showRetry &&
+                    !_isNetworkUnreachable)
+                {
+                    _pendingRefresh = false;
+                    EarlyLog.Write("App.QrLogin", "Replaying queued refresh after poll/import");
+                    var ignored = RefreshAsync(null);
+                }
+            }
         }
 
         /// <summary>
@@ -482,35 +613,34 @@ namespace Vianigram.App.ViewModels.Pages
 
             EarlyLog.Write("App.QrLogin", "ApplyPollResult kind=" + poll.Status);
             _consecutiveFailures = 0;
+            _consecutiveUnreachableFailures = 0;
             ShowRetry = false;
             HasError = false;
+            IsNetworkUnreachable = false;
 
             switch (poll.Status)
             {
                 case QrLoginStatus.Pending:
                     if (poll.Token != null)
                     {
-                        // The wire returns a fresh token on every
-                        // exportLoginToken call, but per Telegram's
-                        // protocol all outstanding tokens issued during
-                        // the same login session stay valid until their
-                        // own expiry — the user's earlier scan of the
-                        // visible QR is still recognised on a later
-                        // poll. So we keep the rendered QR stable
-                        // across polls and only swap to the freshly
-                        // issued token when the rendered one is within
-                        // RefreshLeadSeconds of expiry. Without this
-                        // the QR visibly flickers every PollIntervalSeconds
-                        // (~4s) while the user is mid-scan.
+                        // Keep the rendered QR stable across polls and
+                        // only swap when the visible token is close to
+                        // expiry. The QR text is the exact Telegram deep
+                        // link string; do not pass it through Uri.ToString(),
+                        // because .NET normalizes tg://login?token=... into
+                        // tg://login/?token=..., which Telegram Android
+                        // rejects before decoding.
                         bool needsRender = _currentToken == null ||
-                            (_currentToken.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds <= RefreshLeadSeconds;
+                            GetSecondsUntilExpiry() <= RefreshLeadSeconds;
                         if (needsRender)
                         {
                             _currentToken = poll.Token;
-                            QrText = poll.Token.TgUri.ToString();
+                            _currentTokenVisibleUntilUtc = ComputeVisibleUntilUtc(poll.Token);
+                            QrText = poll.Token.QrText;
                             EarlyLog.Write(
                                 "App.QrLogin",
                                 "Token rendered expiresAt=" + poll.Token.ExpiresAt.ToString("o") +
+                                " visibleUntil=" + _currentTokenVisibleUntilUtc.ToString("o") +
                                 " secs_until_expiry=" + GetSecondsUntilExpiry());
 
                             // Prioritize first paint. Starting the speculative
@@ -591,17 +721,74 @@ namespace Vianigram.App.ViewModels.Pages
         private int GetSecondsUntilExpiry()
         {
             if (_currentToken == null) return 0;
-            double secs = (_currentToken.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds;
+            double secs = (_currentTokenVisibleUntilUtc - DateTimeOffset.UtcNow).TotalSeconds;
             if (secs <= 0) return 0;
             return (int)Math.Ceiling(secs);
         }
 
+        private static DateTimeOffset ComputeVisibleUntilUtc(QrLoginToken token)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset localDeadline = now.AddSeconds(MaxVisibleTokenLifetimeSeconds);
+            if (token == null)
+            {
+                return localDeadline;
+            }
+
+            if (token.ExpiresAt > now && token.ExpiresAt < localDeadline)
+            {
+                return token.ExpiresAt;
+            }
+
+            return localDeadline;
+        }
+
         private void BumpFailureStreak()
         {
+            BumpFailureStreak(null);
+        }
+
+        /// <summary>
+        /// Increment the failure streak and, if the error message
+        /// matches our "no route to host" signature, also bump a
+        /// separate unreachable counter. When the unreachable counter
+        /// hits NetworkUnreachableLimit, pivot to the
+        /// "network blocking Telegram" surface instead of letting the
+        /// generic retry-streak countdown play out — the latter wastes
+        /// 30+ seconds on doomed retries when the user could already
+        /// have started the phone-login flow.
+        /// </summary>
+        private void BumpFailureStreak(AccountError error)
+        {
             _consecutiveFailures++;
+            bool unreachable = IsUnreachableError(error);
+            if (unreachable)
+            {
+                _consecutiveUnreachableFailures++;
+            }
+
             EarlyLog.Write(
                 "App.QrLogin",
-                "Failure streak=" + _consecutiveFailures + "/" + RetryStreakLimit);
+                "Failure streak=" + _consecutiveFailures + "/" + RetryStreakLimit +
+                (unreachable ? " (unreachable=" + _consecutiveUnreachableFailures + "/" + NetworkUnreachableLimit + ")" : string.Empty));
+
+            // Distinct unreachable surface — surfaces BEFORE the generic
+            // retry-streak limit so users on a network that blocks the
+            // home DC don't sit through three full failed cycles.
+            if (_consecutiveUnreachableFailures >= NetworkUnreachableLimit)
+            {
+                _timer.Stop();
+                ShowRetry = true;
+                HasError = true;
+                IsNetworkUnreachable = true;
+                StatusText = Strings.Get("QrLoginStatusNetworkBlocked");
+                EarlyLog.Write(
+                    "App.QrLogin",
+                    "Network unreachable surface engaged after " +
+                    _consecutiveUnreachableFailures + " unreachable failures");
+                return;
+            }
+
             if (_consecutiveFailures >= RetryStreakLimit)
             {
                 _timer.Stop();
@@ -612,12 +799,30 @@ namespace Vianigram.App.ViewModels.Pages
             }
         }
 
+        private static bool IsUnreachableError(AccountError error)
+        {
+            if (error == null) return false;
+            if (error.Kind != AccountErrorKind.NetworkError) return false;
+            string msg = error.Message ?? string.Empty;
+            if (msg.Length == 0) return false;
+            for (int i = 0; i < UnreachableMarkers.Length; i++)
+            {
+                if (msg.IndexOf(UnreachableMarkers[i], StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private async Task OnRetryAsync()
         {
             EarlyLog.Write("App.QrLogin", "Retry tapped — resetting and refetching");
             _consecutiveFailures = 0;
+            _consecutiveUnreachableFailures = 0;
             ShowRetry = false;
             HasError = false;
+            IsNetworkUnreachable = false;
             await RefreshAsync(null).ConfigureAwait(true);
         }
 
@@ -630,6 +835,12 @@ namespace Vianigram.App.ViewModels.Pages
             else _nav.NavigateTo(Route.PhoneNumber);
         }
 
+        private void OnProxy(object parameter)
+        {
+            EarlyLog.Write("App.QrLogin", "Proxy tapped");
+            if (_nav != null) _nav.NavigateTo(Route.ProxySettings);
+        }
+
         private void ResetForFreshSession()
         {
             // P2: full state cleanup. Stop the timer, drop the cached
@@ -639,14 +850,19 @@ namespace Vianigram.App.ViewModels.Pages
             _timer.Stop();
             StopAndDisposeTokenSource();
             _currentToken = null;
+            _currentTokenVisibleUntilUtc = DateTimeOffset.MinValue;
             QrText = null;
             _consecutiveFailures = 0;
+            _consecutiveUnreachableFailures = 0;
             _isLoadingQr = false;
             _pendingRefresh = false;
+            Volatile.Write(ref _pollInFlight, 0);
+            Volatile.Write(ref _refreshDeferredForPollLogged, 0);
             _lastPollUtc = DateTimeOffset.MinValue;
             Volatile.Write(ref _prewarmStarted, 0);
             HasError = false;
             ShowRetry = false;
+            IsNetworkUnreachable = false;
             Volatile.Write(ref _navigateGuard, 0);
         }
 

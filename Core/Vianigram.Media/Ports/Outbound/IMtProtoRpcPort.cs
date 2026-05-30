@@ -29,6 +29,8 @@ namespace Vianigram.Media.Ports.Outbound
     {
         Task<Result<byte[], MediaError>> CallAsync(byte[] tlRequest, CancellationToken ct);
 
+        Task<Result<byte[], MediaError>> CallAsync(byte[] tlRequest, int dcId, CancellationToken ct);
+
         /// <summary>
         /// Zero-copy media-chunk overload. The request payload is
         /// passed in as an <see cref="IBuffer"/> (callers typically wrap a
@@ -47,5 +49,7 @@ namespace Vianigram.Media.Ports.Outbound
         /// the adapter. Handlers never see raw error strings (rule M2).</para>
         /// </summary>
         Task<Result<IBuffer, MediaError>> CallBufferAsync(IBuffer requestBuffer, CancellationToken ct);
+
+        Task<Result<IBuffer, MediaError>> CallBufferAsync(IBuffer requestBuffer, int dcId, CancellationToken ct);
     }
 }

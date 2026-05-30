@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m3="http://schemas.microsoft.com/appx/2014/manifest" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest">
-  <Identity Name="Vianigram.App" Publisher="CN=Vianigram" Version="0.1.0.0" />
+  <Identity Name="Vianigram.App" Publisher="CN=Vianigram" Version="0.1.2.0" />
   <mp:PhoneIdentity PhoneProductId="c1d2e3f4-a5b6-4c7d-ae01-f1a2b3c4d5e6" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>Vianigram</DisplayName>
@@ -31,12 +31,6 @@
         </m3:InitialRotationPreference>
       </m3:VisualElements>
       <Extensions>
-        <!-- Protocol activation: tg:// — opens the proxy settings page
-             when the user taps a tg://proxy?server=...&port=...&secret=...
-             URL from any other app (browser, messenger, share sheet).
-             The activation handler in App.xaml.cs parses the URI and
-             pre-fills the proxy form so the user only has to review
-             and tap Save. -->
         <Extension Category="windows.protocol">
           <Protocol Name="tg" />
         </Extension>
@@ -52,6 +46,12 @@
             <Task Type="pushNotification" />
           </BackgroundTasks>
         </Extension>
+        <!-- Protocol activation: tg:// — opens the proxy settings page
+             when the user taps a tg://proxy?server=...&port=...&secret=...
+             URL from any other app (browser, messenger, share sheet).
+             The activation handler in App.xaml.cs parses the URI and
+             pre-fills the proxy form so the user only has to review
+             and tap Save. -->
         <!-- Phase 8 (background notifications): MPNS is moribund on
              WP 8.1 in 2026, so we replace it with two cooperating
              background tasks that wake the device locally:

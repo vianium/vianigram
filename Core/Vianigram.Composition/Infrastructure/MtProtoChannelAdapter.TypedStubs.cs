@@ -1350,7 +1350,7 @@ namespace Vianigram.Composition.Infrastructure
                     | (body[i + 1] << 8)
                     | (body[i + 2] << 16)
                     | (body[i + 3] << 24));
-                if (ctor == CtorUserA || ctor == CtorUserB)
+                if (ctor == CtorUserA || ctor == CtorUserB || ctor == CtorUser214)
                 {
                     try
                     {

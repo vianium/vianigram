@@ -47,6 +47,15 @@ namespace Vianigram.Account.Infrastructure
         public const uint AuthImportAuthorization = 0xa57a7dad;
         public const uint AuthExportedAuthorization = 0xb434e2b8;
 
+        // help.getConfig#c4f9186b = Config;
+        //
+        // No-arg RPC documented at https://core.telegram.org/method/help.getConfig.
+        // Returned Config object carries the canonical dc_options vector
+        // that we persist via SqliteDcOptionsStore. Called once after the
+        // first successful DC handshake so cold starts on subsequent
+        // launches have multiple IPs per DC available.
+        public const uint HelpGetConfig = 0xc4f9186bu;
+
         // Sub-records.
         public const uint CodeSettings = 0xad253d78;     // codeSettings#ad253d78 with no flags
 
@@ -178,6 +187,19 @@ namespace Vianigram.Account.Infrastructure
             }
         }
 
+        /// <summary>
+        /// <c>help.getConfig#c4f9186b = Config;</c> — no-arg RPC.
+        /// Response carries the canonical <c>dc_options</c> vector.
+        /// </summary>
+        public static byte[] EncodeHelpGetConfig()
+        {
+            using (var ms = new MemoryStream())
+            {
+                WriteUInt(ms, HelpGetConfig);
+                return ms.ToArray();
+            }
+        }
+
         // ---- account.registerDevice --------------------------------------
         //
         //   account.registerDevice#ec86017a flags:#
@@ -189,8 +211,9 @@ namespace Vianigram.Account.Infrastructure
         //       other_uids:Vector<long>
         //   = Bool;
         //
-        // For Windows Phone (MPNS) we set token_type=8, token=channel-uri,
-        // app_sandbox=false, secret=empty, other_uids=empty. Telegram pushes
+        // For Windows Push Notification Services we set token_type=8,
+        // token=channel-uri, app_sandbox=false, secret=empty,
+        // other_uids=empty. Telegram pushes
         // raw notifications to the channel URI; the platform OS hands the
         // payload to our RawNotificationTask which decrypts via the
         // session secret and shows a toast.
@@ -200,7 +223,7 @@ namespace Vianigram.Account.Infrastructure
         public const uint BoolFalse = 0xbc799737u;
 
         /// <summary>
-        /// Build an <c>account.registerDevice</c> request for an MPNS
+        /// Build an <c>account.registerDevice</c> request for a WNS
         /// channel. Caller passes the URI from
         /// <c>PushNotificationChannelManager.CreatePushNotificationChannelForApplicationAsync()</c>.
         /// </summary>
@@ -234,7 +257,7 @@ namespace Vianigram.Account.Infrastructure
         }
 
         /// <summary>
-        /// Build an <c>account.unregisterDevice</c> request for an MPNS
+        /// Build an <c>account.unregisterDevice</c> request for a WNS
         /// channel. Called on logout to stop receiving pushes for the
         /// signed-out account.
         ///

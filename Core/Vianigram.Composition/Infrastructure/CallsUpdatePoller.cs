@@ -51,6 +51,7 @@ namespace Vianigram.Composition.Infrastructure
         private readonly Vianigram.Sync.Ports.Outbound.IMtProtoRpcPort _rpc;
         private readonly Func<ISyncApi> _resolveSync;
         private readonly Func<CallsApplication> _resolveCalls;
+        private readonly Func<bool> _isAuthorized;
         private readonly IClock _clock;
         private readonly CancellationTokenSource _shutdown = new CancellationTokenSource();
         private readonly IDisposable[] _subscriptions;
@@ -63,13 +64,15 @@ namespace Vianigram.Composition.Infrastructure
         private int _disposed;
         private int _pollCount;
         private int _failureLogCount;
+        private int _authGateLogged;
 
         public CallsUpdatePoller(
             Vianigram.Sync.Ports.Outbound.IMtProtoRpcPort rpc,
             Func<ISyncApi> resolveSync,
             Func<CallsApplication> resolveCalls,
             IEventBus bus,
-            IClock clock)
+            IClock clock,
+            Func<bool> isAuthorized = null)
         {
             if (rpc == null) throw new ArgumentNullException("rpc");
             if (resolveSync == null) throw new ArgumentNullException("resolveSync");
@@ -80,6 +83,7 @@ namespace Vianigram.Composition.Infrastructure
             _rpc = rpc;
             _resolveSync = resolveSync;
             _resolveCalls = resolveCalls;
+            _isAuthorized = isAuthorized;
             _clock = clock;
 
             _subscriptions = new IDisposable[]
@@ -186,6 +190,20 @@ namespace Vianigram.Composition.Infrastructure
 
         private async Task PollOnceAsync(CancellationToken ct)
         {
+            if (!IsAuthorizedForPolling())
+            {
+                if (Interlocked.Exchange(ref _authGateLogged, 1) == 0)
+                {
+                    EarlyLog.Write("Calls.Poll", "updates.getDifference paused: account not authorized");
+                }
+                return;
+            }
+
+            if (Interlocked.Exchange(ref _authGateLogged, 0) != 0)
+            {
+                EarlyLog.Write("Calls.Poll", "updates.getDifference resumed: account authorized");
+            }
+
             ISyncApi sync = null;
             try { sync = _resolveSync(); }
             catch { }
@@ -363,6 +381,22 @@ namespace Vianigram.Composition.Infrastructure
         private bool IsFastPolling()
         {
             return _clock.UtcNow <= _fastUntilUtc;
+        }
+
+        private bool IsAuthorizedForPolling()
+        {
+            if (_isAuthorized == null) return true;
+
+            try
+            {
+                return _isAuthorized();
+            }
+            catch (Exception ex)
+            {
+                LogFailure("authorization gate failed; pausing calls poll: "
+                    + ex.GetType().Name + ": " + ex.Message);
+                return false;
+            }
         }
 
         private void LogFailure(string message)

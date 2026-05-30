@@ -181,10 +181,9 @@ namespace Vianigram.App.ViewModels.Pages
             _filePath = pathOrUri;
             ErrorMessage = null;
 
-            string lower = pathOrUri.ToLowerInvariant();
-            bool video = lower.EndsWith(".mp4") || lower.EndsWith(".mov")
-                         || lower.EndsWith(".m4v") || lower.EndsWith(".avi");
+            bool video = IsVideoPath(pathOrUri);
             IsVideo = video;
+            if (video) Source = null;
 
             try
             {
@@ -224,6 +223,22 @@ namespace Vianigram.App.ViewModels.Pages
             {
                 ErrorMessage = "Failed to open media: " + ex.GetType().Name;
             }
+        }
+
+        private static bool IsVideoPath(string pathOrUri)
+        {
+            if (string.IsNullOrWhiteSpace(pathOrUri)) return false;
+
+            string lower = pathOrUri.ToLowerInvariant();
+            return lower.EndsWith(".mp4") ||
+                   lower.EndsWith(".m4v") ||
+                   lower.EndsWith(".mov") ||
+                   lower.EndsWith(".avi") ||
+                   lower.EndsWith(".wmv") ||
+                   lower.EndsWith(".3gp") ||
+                   lower.EndsWith(".3g2") ||
+                   lower.EndsWith(".mkv") ||
+                   lower.EndsWith(".webm");
         }
 
         // ---- Command handlers --------------------------------------------

@@ -724,7 +724,8 @@ namespace Vianigram.Messages.Infrastructure
         private const uint CtorMessageMediaUnsupported = 0x9f84f49eu;
         private const uint CtorMessageMediaDocumentA   = 0x4cf4d864u; // older
         private const uint CtorMessageMediaDocumentB   = 0xdd570bd5u; // mid-layer
-        private const uint CtorMessageMediaDocumentC   = 0x52d8ccd9u; // layer 214
+        private const uint CtorMessageMediaDocumentC   = 0x4cf4d72du; // layer 214
+        private const uint CtorMessageMediaDocumentLegacy = 0x52d8ccd9u;
         private const uint CtorMessageMediaWebPage     = 0xddf10c3bu; // layer 214
         private const uint CtorMessageMediaWebPageOld  = 0xa32dd600u;
         private const uint CtorMessageMediaPoll        = 0x4bd6e798u;
@@ -752,8 +753,19 @@ namespace Vianigram.Messages.Infrastructure
         private const uint CtorDocAttrImageSize  = 0x6c37c15cu;
         private const uint CtorDocAttrAnimated   = 0x11b58939u;
         private const uint CtorDocAttrSticker    = 0x6319d612u;
-        private const uint CtorDocAttrVideo      = 0x0ef02ce6u;
+        private const uint CtorDocumentEmpty     = 0x36f8c871u;
+        private const uint CtorDocument          = 0x8fd4c4d8u;
+        private const uint CtorDocAttrVideo      = 0x43c57c48u;
+        private const uint CtorDocAttrVideoLegacy = 0x0ef02ce6u;
         private const uint CtorDocAttrAudio      = 0x9852f9c6u;
+        private const uint CtorDocAttrHasStickers = 0x9801d2f7u;
+        private const uint CtorDocAttrCustomEmoji = 0xfd149899u;
+        private const uint CtorVideoSize         = 0xde33b094u;
+        private const uint CtorVideoSizeEmojiMarkup = 0xf85c413cu;
+        private const uint CtorInputStickerSetEmpty = 0xffb62b95u;
+        private const uint CtorInputStickerSetId = 0x9de7a269u;
+        private const uint CtorInputStickerSetShortName = 0x861cc8a0u;
+        private const uint CtorMaskCoords        = 0xaed6dbb2u;
 
         private const uint CtorTextWithEntities = 0x744694e0u;
         private const uint CtorPoll = 0x86e18161u;
@@ -803,6 +815,7 @@ namespace Vianigram.Messages.Infrastructure
                 case CtorMessageMediaDocumentA:
                 case CtorMessageMediaDocumentB:
                 case CtorMessageMediaDocumentC:
+                case CtorMessageMediaDocumentLegacy:
                     return ParseDocumentMedia(r, ms, caption);
                 case CtorMessageMediaContact:
                     return ParseContactMedia(r, ms);
@@ -1306,24 +1319,343 @@ namespace Vianigram.Messages.Infrastructure
             }
         }
 
-        /// <summary>
-        /// Heuristic document classifier. Walks up to ~768 bytes ahead from
-        /// the current cursor at 4-byte alignment looking for
-        /// DocumentAttribute ctors. The first matching attributes determine
-        /// whether the document is a voice note / audio / sticker /
-        /// animation / video / videoNote / file. The cursor is restored to
-        /// its original position before returning so the outer scan-skip
-        /// recovery in TryDecodeMessages walks the body normally.
-        ///
-        /// We deliberately avoid parsing the document's fixed-length prefix
-        /// (id, access_hash, file_reference, mime_type, size, etc.) because
-        /// the conditional thumbs / video_thumbs vectors carry rich
-        /// PhotoSize variants we don't model. The scan-by-ctor approach is
-        /// fragile only at boundaries; in practice it lands on the right
-        /// attribute ~99% of the time and degrades gracefully when it
-        /// doesn't (returns a generic Document bubble).
-        /// </summary>
         private static MessageContent ParseDocumentMedia(BinaryReader r, MemoryStream ms, string caption)
+        {
+            long startPos = ms.Position;
+            try
+            {
+                int mediaFlags = r.ReadInt32();
+                if ((mediaFlags & 1) == 0)
+                    return new MessageContentDocument(string.Empty, 0L, string.Empty, string.Empty, caption);
+
+                DocumentProjection doc = ReadDocumentProjection(r);
+                return BuildDocumentContent(doc, caption);
+            }
+            catch
+            {
+                ms.Position = startPos;
+                return ParseDocumentMediaByScan(r, ms, caption);
+            }
+            finally
+            {
+                ms.Position = startPos;
+            }
+        }
+
+        private sealed class DocumentProjection
+        {
+            public long Id;
+            public long AccessHash;
+            public byte[] FileReference;
+            public int DcId;
+            public long Size;
+            public string MimeType;
+            public string FileName;
+            public IList<MediaThumbnail> Thumbnails;
+            public bool IsVoice;
+            public bool IsAudio;
+            public bool IsSticker;
+            public bool IsAnimation;
+            public bool IsVideo;
+            public bool IsVideoNote;
+            public bool IsCustomEmoji;
+            public int DurationSeconds;
+            public int Width;
+            public int Height;
+            public string AudioTitle;
+            public string AudioPerformer;
+            public byte[] VoiceWaveform;
+            public string StickerEmoji;
+        }
+
+        private static DocumentProjection ReadDocumentProjection(BinaryReader r)
+        {
+            uint documentCtor = r.ReadUInt32();
+            if (documentCtor == CtorDocumentEmpty)
+            {
+                long emptyId = r.ReadInt64();
+                return new DocumentProjection
+                {
+                    Id = emptyId,
+                    AccessHash = 0L,
+                    FileReference = null,
+                    DcId = 0,
+                    Size = 0L,
+                    MimeType = string.Empty,
+                    FileName = string.Empty,
+                    Thumbnails = new MediaThumbnail[0]
+                };
+            }
+
+            if (documentCtor != CtorDocument)
+                throw new InvalidDataException("document ctor");
+
+            int docFlags = r.ReadInt32();
+            long id = r.ReadInt64();
+            long accessHash = r.ReadInt64();
+            byte[] fileReference = ReadBytes(r);
+            r.ReadInt32(); // date
+            string mime = ReadString(r);
+            long size = r.ReadInt64();
+
+            var thumbnails = new List<MediaThumbnail>();
+            int bestWidth = 0;
+            int bestHeight = 0;
+            long bestSize = 0;
+
+            if ((docFlags & (1 << 0)) != 0)
+                ReadPhotoSizeVector(r, thumbnails, ref bestWidth, ref bestHeight, ref bestSize);
+
+            if ((docFlags & (1 << 1)) != 0)
+                SkipVideoSizeVector(r);
+
+            int dcId = r.ReadInt32();
+            DocumentProjection doc = ReadDocumentAttributes(r);
+            doc.Id = id;
+            doc.AccessHash = accessHash;
+            doc.FileReference = fileReference;
+            doc.DcId = dcId;
+            doc.Size = size;
+            doc.MimeType = mime ?? string.Empty;
+            doc.Thumbnails = thumbnails;
+            if (string.IsNullOrEmpty(doc.FileName))
+                doc.FileName = string.Empty;
+            return doc;
+        }
+
+        private static MessageContent BuildDocumentContent(DocumentProjection doc, string caption)
+        {
+            if (doc == null)
+                return new MessageContentDocument(string.Empty, 0L, string.Empty, string.Empty, caption);
+
+            string fileId = doc.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            string fileName = FirstNonEmpty(doc.FileName, GuessFileName(doc.MimeType));
+            var file = new TelegramMediaFile(
+                fileId,
+                doc.AccessHash,
+                doc.FileReference,
+                doc.DcId,
+                doc.Size,
+                doc.MimeType,
+                fileName,
+                string.Empty,
+                string.Empty);
+
+            var span = TimeSpan.FromSeconds(doc.DurationSeconds);
+            if (doc.IsVoice)
+                return new MessageContentVoice(span, string.Empty, doc.VoiceWaveform,
+                    file, CtorMessageMediaDocumentC, null, null, null);
+            if (doc.IsAudio)
+                return new MessageContentAudio(span, doc.AudioTitle, doc.AudioPerformer,
+                    doc.Size, string.Empty, string.Empty, caption, null, file,
+                    doc.Thumbnails, CtorMessageMediaDocumentC, null, null, null);
+            if (doc.IsSticker || doc.IsCustomEmoji)
+                return new MessageContentSticker(doc.StickerEmoji, string.Empty,
+                    file, doc.Thumbnails, CtorMessageMediaDocumentC, null, null, null);
+            if (doc.IsAnimation)
+                return new MessageContentVideo(span, doc.Width, doc.Height, doc.Size,
+                    string.Empty, string.Empty, caption, false, true, null, file,
+                    doc.Thumbnails, CtorMessageMediaDocumentC, null, null, null);
+            if (doc.IsVideoNote)
+                return new MessageContentVideo(span, doc.Width, doc.Height, doc.Size,
+                    string.Empty, string.Empty, caption, true, false, null, file,
+                    doc.Thumbnails, CtorMessageMediaDocumentC, null, null, null);
+            if (doc.IsVideo)
+                return new MessageContentVideo(span, doc.Width, doc.Height, doc.Size,
+                    string.Empty, string.Empty, caption, false, false, null, file,
+                    doc.Thumbnails, CtorMessageMediaDocumentC, null, null, null);
+
+            return new MessageContentDocument(fileName, doc.Size, doc.MimeType,
+                string.Empty, string.Empty, caption, null, file, doc.Thumbnails,
+                CtorMessageMediaDocumentC, null, null, null);
+        }
+
+        private static DocumentProjection ReadDocumentAttributes(BinaryReader r)
+        {
+            var doc = new DocumentProjection
+            {
+                MimeType = string.Empty,
+                FileName = string.Empty,
+                AudioTitle = string.Empty,
+                AudioPerformer = string.Empty,
+                StickerEmoji = string.Empty,
+                Thumbnails = new MediaThumbnail[0]
+            };
+
+            uint vectorCtor = r.ReadUInt32();
+            if (vectorCtor != CtorVector) return doc;
+
+            int count = r.ReadInt32();
+            if (count < 0 || count > 64) return doc;
+
+            for (int i = 0; i < count; i++)
+            {
+                uint attrCtor = r.ReadUInt32();
+                switch (attrCtor)
+                {
+                    case CtorDocAttrFilename:
+                        doc.FileName = ReadString(r);
+                        break;
+                    case CtorDocAttrImageSize:
+                        doc.Width = r.ReadInt32();
+                        doc.Height = r.ReadInt32();
+                        break;
+                    case CtorDocAttrAnimated:
+                        doc.IsAnimation = true;
+                        break;
+                    case CtorDocAttrAudio:
+                    {
+                        int flags = r.ReadInt32();
+                        doc.DurationSeconds = r.ReadInt32();
+                        if ((flags & (1 << 10)) != 0) doc.IsVoice = true;
+                        else doc.IsAudio = true;
+                        if ((flags & (1 << 0)) != 0) doc.AudioTitle = ReadString(r);
+                        if ((flags & (1 << 1)) != 0) doc.AudioPerformer = ReadString(r);
+                        if ((flags & (1 << 2)) != 0) doc.VoiceWaveform = ReadBytes(r);
+                        break;
+                    }
+                    case CtorDocAttrVideo:
+                    case CtorDocAttrVideoLegacy:
+                    {
+                        int flags = r.ReadInt32();
+                        if ((flags & (1 << 0)) != 0) doc.IsVideoNote = true;
+                        else doc.IsVideo = true;
+                        doc.DurationSeconds = (int)Math.Round(r.ReadDouble());
+                        doc.Width = r.ReadInt32();
+                        doc.Height = r.ReadInt32();
+                        if ((flags & (1 << 2)) != 0) r.ReadInt32(); // preload_prefix_size
+                        if ((flags & (1 << 4)) != 0) r.ReadDouble(); // video_start_ts
+                        if ((flags & (1 << 5)) != 0) ReadString(r); // video_codec
+                        break;
+                    }
+                    case CtorDocAttrSticker:
+                    {
+                        int flags = r.ReadInt32();
+                        doc.IsSticker = true;
+                        doc.StickerEmoji = ReadString(r);
+                        SkipInputStickerSet(r);
+                        if ((flags & (1 << 0)) != 0) SkipMaskCoords(r);
+                        break;
+                    }
+                    case CtorDocAttrCustomEmoji:
+                    {
+                        r.ReadInt32(); // flags
+                        doc.IsCustomEmoji = true;
+                        doc.StickerEmoji = ReadString(r);
+                        SkipInputStickerSet(r);
+                        break;
+                    }
+                    case CtorDocAttrHasStickers:
+                        break;
+                    default:
+                        throw new InvalidDataException("document attribute ctor");
+                }
+            }
+
+            return doc;
+        }
+
+        private static void ReadPhotoSizeVector(BinaryReader r, IList<MediaThumbnail> thumbnails,
+            ref int bestWidth, ref int bestHeight, ref long bestSize)
+        {
+            uint vectorCtor = r.ReadUInt32();
+            if (vectorCtor != CtorVector) return;
+
+            int count = r.ReadInt32();
+            if (count < 0 || count > 64) return;
+            for (int i = 0; i < count; i++)
+                ReadPhotoSize(r, thumbnails, ref bestWidth, ref bestHeight, ref bestSize);
+        }
+
+        private static void SkipVideoSizeVector(BinaryReader r)
+        {
+            uint vectorCtor = r.ReadUInt32();
+            if (vectorCtor != CtorVector) return;
+
+            int count = r.ReadInt32();
+            if (count < 0 || count > 64) return;
+
+            for (int i = 0; i < count; i++)
+            {
+                uint ctor = r.ReadUInt32();
+                if (ctor == CtorVideoSize)
+                {
+                    int flags = r.ReadInt32();
+                    ReadString(r);
+                    r.ReadInt32();
+                    r.ReadInt32();
+                    r.ReadInt32();
+                    if ((flags & 1) != 0) r.ReadDouble();
+                }
+                else if (ctor == CtorVideoSizeEmojiMarkup)
+                {
+                    r.ReadInt64();
+                    SkipIntVector(r);
+                }
+                else
+                {
+                    throw new InvalidDataException("video size ctor");
+                }
+            }
+        }
+
+        private static void SkipIntVector(BinaryReader r)
+        {
+            uint vectorCtor = r.ReadUInt32();
+            if (vectorCtor != CtorVector) return;
+            int count = r.ReadInt32();
+            if (count < 0 || count > 128) return;
+            for (int i = 0; i < count; i++) r.ReadInt32();
+        }
+
+        private static void SkipInputStickerSet(BinaryReader r)
+        {
+            uint ctor = r.ReadUInt32();
+            switch (ctor)
+            {
+                case CtorInputStickerSetEmpty:
+                    return;
+                case CtorInputStickerSetId:
+                    r.ReadInt64();
+                    r.ReadInt64();
+                    return;
+                case CtorInputStickerSetShortName:
+                    ReadString(r);
+                    return;
+                default:
+                    throw new InvalidDataException("inputStickerSet ctor");
+            }
+        }
+
+        private static void SkipMaskCoords(BinaryReader r)
+        {
+            uint ctor = r.ReadUInt32();
+            if (ctor != CtorMaskCoords)
+                throw new InvalidDataException("maskCoords ctor");
+            r.ReadInt32();
+            r.ReadDouble();
+            r.ReadDouble();
+            r.ReadDouble();
+        }
+
+        private static string GuessFileName(string mime)
+        {
+            if (string.IsNullOrEmpty(mime)) return "file";
+            if (mime.IndexOf("word", StringComparison.OrdinalIgnoreCase) >= 0) return "document.docx";
+            if (mime.IndexOf("excel", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                mime.IndexOf("spreadsheet", StringComparison.OrdinalIgnoreCase) >= 0) return "document.xlsx";
+            if (mime.IndexOf("powerpoint", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                mime.IndexOf("presentation", StringComparison.OrdinalIgnoreCase) >= 0) return "document.pptx";
+            if (mime.IndexOf("pdf", StringComparison.OrdinalIgnoreCase) >= 0) return "document.pdf";
+            return "file";
+        }
+
+        private static string FirstNonEmpty(string a, string b)
+        {
+            return !string.IsNullOrEmpty(a) ? a : (b ?? string.Empty);
+        }
+
+        private static MessageContent ParseDocumentMediaByScan(BinaryReader r, MemoryStream ms, string caption)
         {
             long startPos = ms.Position;
             long maxScan = startPos + 768;
@@ -1366,6 +1698,7 @@ namespace Vianigram.Messages.Infrastructure
                         break;
                     }
                     case CtorDocAttrVideo:
+                    case CtorDocAttrVideoLegacy:
                     {
                         try
                         {

@@ -61,6 +61,10 @@ namespace Vianigram.Storage.Composition
             IDialogRepository dialogs;
             IMessageRepository messages;
             ISyncStateRepository syncState;
+            IEndpointHealthStore endpointHealth;
+            IDcOptionsStore dcOptions;
+            IAvatarCacheStore avatarCache;
+            IImportedAuthorizationCacheStore importedAuth;
 
             phaseSw.Restart();
             if (db != null)
@@ -77,6 +81,11 @@ namespace Vianigram.Storage.Composition
 
                 syncState = new JsonSyncStateRepository(
                     new SqliteObjectStore<SyncStateRepositoryState>(db, "sync_state", false, null));
+
+                endpointHealth = new SqliteEndpointHealthStore(db);
+                dcOptions = new SqliteDcOptionsStore(db);
+                avatarCache = new SqliteAvatarCacheStore(db);
+                importedAuth = new SqliteImportedAuthorizationCacheStore(db);
             }
             else
             {
@@ -84,6 +93,10 @@ namespace Vianigram.Storage.Composition
                 dialogs = new JsonDialogRepository();
                 messages = new JsonMessageRepository();
                 syncState = new JsonSyncStateRepository();
+                endpointHealth = null;
+                dcOptions = null;
+                avatarCache = null;
+                importedAuth = null;
             }
             phaseSw.Stop();
             EarlyLog.Write("Storage", "repositories-wire elapsed=" +
@@ -94,7 +107,9 @@ namespace Vianigram.Storage.Composition
                 totalSw.ElapsedMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture) +
                 "ms backend=" + (db == null ? "json" : "sqlite"));
 
-            return new StorageRegistrations(protector, authKeys, dialogs, messages, syncState);
+            return new StorageRegistrations(
+                protector, authKeys, dialogs, messages, syncState,
+                endpointHealth, dcOptions, avatarCache, importedAuth);
         }
 
         public static void ScheduleDeferredMaintenance()
@@ -174,7 +189,11 @@ namespace Vianigram.Storage.Composition
             IAuthKeyStore authKeyStore,
             IDialogRepository dialogRepository,
             IMessageRepository messageRepository,
-            ISyncStateRepository syncStateRepository)
+            ISyncStateRepository syncStateRepository,
+            IEndpointHealthStore endpointHealthStore,
+            IDcOptionsStore dcOptionsStore,
+            IAvatarCacheStore avatarCacheStore,
+            IImportedAuthorizationCacheStore importedAuthorizationCacheStore)
         {
             if (dataProtector == null) throw new ArgumentNullException("dataProtector");
             if (authKeyStore == null) throw new ArgumentNullException("authKeyStore");
@@ -182,11 +201,20 @@ namespace Vianigram.Storage.Composition
             if (messageRepository == null) throw new ArgumentNullException("messageRepository");
             if (syncStateRepository == null) throw new ArgumentNullException("syncStateRepository");
 
+            // endpointHealthStore, dcOptionsStore, avatarCacheStore and
+            // importedAuthorizationCacheStore are intentionally nullable —
+            // in the JSON-fallback path (db == null) there is no backing
+            // storage. Callers gracefully degrade to the process-only
+            // behaviour when the store is null.
             DataProtector = dataProtector;
             AuthKeyStore = authKeyStore;
             DialogRepository = dialogRepository;
             MessageRepository = messageRepository;
             SyncStateRepository = syncStateRepository;
+            EndpointHealthStore = endpointHealthStore;
+            DcOptionsStore = dcOptionsStore;
+            AvatarCacheStore = avatarCacheStore;
+            ImportedAuthorizationCacheStore = importedAuthorizationCacheStore;
         }
 
         public IDataProtector DataProtector { get; private set; }
@@ -194,5 +222,9 @@ namespace Vianigram.Storage.Composition
         public IDialogRepository DialogRepository { get; private set; }
         public IMessageRepository MessageRepository { get; private set; }
         public ISyncStateRepository SyncStateRepository { get; private set; }
+        public IEndpointHealthStore EndpointHealthStore { get; private set; }
+        public IDcOptionsStore DcOptionsStore { get; private set; }
+        public IAvatarCacheStore AvatarCacheStore { get; private set; }
+        public IImportedAuthorizationCacheStore ImportedAuthorizationCacheStore { get; private set; }
     }
 }

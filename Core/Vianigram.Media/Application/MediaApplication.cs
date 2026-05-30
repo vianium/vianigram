@@ -76,6 +76,11 @@ namespace Vianigram.Media.Application
             return _download.HandleAsync(new StartDownloadCommand(location, type, totalSize), ct);
         }
 
+        public Task<Result<byte[], MediaError>> DownloadRangeAsync(FileLocation location, long offset, int limit, CancellationToken ct)
+        {
+            return _download.DownloadRangeAsync(location, offset, limit, ct);
+        }
+
         public Task<Result<UploadedFile, MediaError>> UploadAsync(byte[] bytes, string fileName, CancellationToken ct)
         {
             return _upload.HandleAsync(new StartUploadCommand(bytes, fileName), ct);

@@ -132,6 +132,19 @@ namespace Vianigram.App.ViewModels.Pages
             set { SetProperty(ref _avatarLetter, value); }
         }
 
+        // Avatar bitmap shared with the chat list. When the peer is
+        // already in the avatar fetcher's bitmap cache (because the user
+        // has seen them in the dialog list) this assignment is
+        // synchronous and the AvatarCircle renders the real photo
+        // instead of initials. Nullable — initials stay visible until
+        // the bitmap arrives.
+        private Windows.UI.Xaml.Media.ImageSource _avatarImage;
+        public Windows.UI.Xaml.Media.ImageSource AvatarImage
+        {
+            get { return _avatarImage; }
+            private set { SetProperty(ref _avatarImage, value); }
+        }
+
         public string StatusText
         {
             get { return _statusText; }
@@ -290,6 +303,48 @@ namespace Vianigram.App.ViewModels.Pages
                 HydrateFromPeerCache();
                 var contactIgnore = HydrateContactAsync(CancellationToken.None);
                 var ignore = HydrateNotificationsAsync(CancellationToken.None);
+            }
+
+            // Avatar hydration is independent of the self/other branch —
+            // both paths can resolve an image from the shared
+            // PeerAvatarFetcher cache. Fire-and-forget: on success the
+            // AvatarCircle.Image binding replaces the initials with the
+            // real photo; on failure the initials remain visible.
+            var avatarIgnore = HydrateAvatarAsync(CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Resolve the small (160×160) avatar bitmap for this peer
+        /// reusing the same fetcher / disk cache the ChatList uses, so
+        /// a photo already downloaded for the dialog row renders here
+        /// without an extra round-trip. Null assignment keeps the
+        /// initials-only placeholder.
+        /// </summary>
+        private async Task HydrateAvatarAsync(CancellationToken ct)
+        {
+            try
+            {
+                Windows.UI.Xaml.Media.ImageSource bmp = null;
+
+                if (IsSelf && _userId > 0)
+                {
+                    bmp = await AvatarResolver
+                        .TryResolveSmallAsync(Vianigram.Media.Domain.ValueObjects.PeerPhotoKind.User, _userId, ct)
+                        .ConfigureAwait(true);
+                }
+                else if (!string.IsNullOrEmpty(_peerKey))
+                {
+                    bmp = await AvatarResolver
+                        .TryResolveSmallAsync(_peerKey, ct)
+                        .ConfigureAwait(true);
+                }
+
+                if (bmp != null) AvatarImage = bmp;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                AppLog.For("App.ProfilePage").Warn("HydrateAvatarAsync threw: " + ex.GetType().Name + ": " + ex.Message);
             }
         }
 

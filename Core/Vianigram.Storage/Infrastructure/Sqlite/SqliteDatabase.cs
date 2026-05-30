@@ -106,6 +106,44 @@ namespace Vianigram.Storage.Infrastructure.Sqlite
                     "CREATE INDEX IF NOT EXISTS ix_kv_scope_ts " +
                     "  ON kv(scope, ts DESC)");
 
+                // Avatar JPEG/PNG cache. Each row holds the bytes of a
+                // single peer-photo (160x160 small face), keyed by
+                // Telegram's photo_id. dc_id is recorded so a future
+                // cross-DC migration can re-validate the source; format
+                // distinguishes JPEG vs PNG so the decoder is fed the
+                // right magic; byte_len + cached_at drive LRU pruning.
+                Exec(
+                    "CREATE TABLE IF NOT EXISTS avatar_cache (" +
+                    "  photo_id  INTEGER NOT NULL PRIMARY KEY," +
+                    "  dc_id     INTEGER NOT NULL," +
+                    "  bytes     BLOB    NOT NULL," +
+                    "  format    TEXT    NOT NULL," +
+                    "  cached_at INTEGER NOT NULL," +
+                    "  byte_len  INTEGER NOT NULL" +
+                    ")");
+                Exec(
+                    "CREATE INDEX IF NOT EXISTS idx_avatar_cache_cached_at " +
+                    "  ON avatar_cache(cached_at)");
+
+                // imported_authorization_cache — see
+                // SqliteImportedAuthorizationCacheStore. Holds the
+                // 128-byte blob returned by auth.exportAuthorization,
+                // keyed by (user_id, target_dc_id). home_dc_id is
+                // recorded so the consumer can invalidate when the
+                // user's home DC changes (post-migrate). cached_at is
+                // here only for diagnostics — these blobs do not
+                // expire on a server-side timer; they remain valid
+                // until the user explicitly revokes the session.
+                Exec(
+                    "CREATE TABLE IF NOT EXISTS imported_authorization_cache (" +
+                    "  user_id      INTEGER NOT NULL," +
+                    "  target_dc_id INTEGER NOT NULL," +
+                    "  auth_blob    BLOB    NOT NULL," +
+                    "  home_dc_id   INTEGER NOT NULL," +
+                    "  cached_at    INTEGER NOT NULL," +
+                    "  PRIMARY KEY (user_id, target_dc_id)" +
+                    ")");
+
                 _initialized = true;
             }
         }

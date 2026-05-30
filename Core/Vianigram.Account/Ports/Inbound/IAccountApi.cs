@@ -76,9 +76,9 @@ namespace Vianigram.Account.Ports.Inbound
         Task PrewarmQrLoginDcsAsync(CancellationToken ct);
 
         /// <summary>
-        /// Register an MPNS push channel URI with Telegram so the server
+        /// Register a platform push channel URI with Telegram so the server
         /// delivers raw push notifications when the app is suspended.
-        /// <paramref name="tokenType"/> = 8 for Windows Phone MPNS. Caller
+        /// <paramref name="tokenType"/> = 8 for WNS. Caller
         /// obtains the URI from
         /// <c>Windows.Networking.PushNotifications.PushNotificationChannelManager</c>.
         /// </summary>

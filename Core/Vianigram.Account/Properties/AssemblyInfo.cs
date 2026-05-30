@@ -14,6 +14,13 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
-[assembly: AssemblyVersion("0.1.0.0")]
-[assembly: AssemblyFileVersion("0.1.0.0")]
+[assembly: AssemblyVersion("0.1.2.0")]
+[assembly: AssemblyFileVersion("0.1.2.0")]
 [assembly: InternalsVisibleTo("Vianigram.Account.Tests")]
+// AccountLoginMtProtoRpcPort in Vianigram.Composition is the composition-
+// layer adapter for Account's IMtProtoRpcPort. It bridges Account's
+// internal TL encoders/decoders to the live MTProto channel — that is
+// literally what it exists to do. Granting it visibility into our
+// internal TL helpers avoids leaking TlEncoder / TlDecoder as public
+// API just to satisfy one wiring assembly.
+[assembly: InternalsVisibleTo("Vianigram.Composition")]

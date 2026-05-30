@@ -67,7 +67,7 @@
     <value>vianigram</value>
   </data>
   <data name="WelcomeVersion.Text" xml:space="preserve">
-    <value>0.1.0.0</value>
+    <value>0.1.2.0</value>
   </data>
   <data name="WelcomeTagline.Text" xml:space="preserve">
     <value>un cliente no oficial de telegram nativo para windows phone — pivotes rápidos, tilt, y el metro que recuerdas.</value>
@@ -83,6 +83,9 @@
   </data>
   <data name="WelcomeContinue.Content" xml:space="preserve">
     <value>continuar con telegram</value>
+  </data>
+  <data name="WelcomeProxy.Content" xml:space="preserve">
+    <value>MTProxy</value>
   </data>
   <data name="WelcomeScanQr.Content" xml:space="preserve">
     <value>escanear qr</value>
@@ -173,7 +176,7 @@
     <value>Introduce el código que recibiste.</value>
   </data>
   <data name="SmsCodeTwoFaUnavailable" xml:space="preserve">
-    <value>La autenticacion de dos factores requiere tu contrasena en la nube.</value>
+    <value>La autenticación de dos factores requiere tu contraseña en la nube.</value>
   </data>
   <data name="SmsCodeTitle" xml:space="preserve">
     <value>Introduce el código</value>
@@ -247,6 +250,9 @@
   <data name="QrLoginUsePhoneButton.Content" xml:space="preserve">
     <value>usar número de teléfono</value>
   </data>
+  <data name="QrLoginProxyButton.Content" xml:space="preserve">
+    <value>MTProxy</value>
+  </data>
   <data name="QrLoginStatusConnecting" xml:space="preserve">
     <value>Conectando con Telegram...</value>
   </data>
@@ -281,7 +287,7 @@
     <value>Actualizando QR...</value>
   </data>
   <data name="QrLoginStatusExpired" xml:space="preserve">
-    <value>El QR expiro. Actualizando...</value>
+    <value>El QR expiró. Actualizando...</value>
   </data>
   <data name="QrLoginStatusAccepted" xml:space="preserve">
     <value>Vinculando dispositivo...</value>
@@ -290,13 +296,16 @@
     <value>Vinculando tu dispositivo — esto puede tardar unos segundos...</value>
   </data>
   <data name="QrLoginStatusTwoFa" xml:space="preserve">
-    <value>Se requiere contrasena 2FA.</value>
+    <value>Se requiere contraseña 2FA.</value>
   </data>
   <data name="QrLoginStatusSignUpRequired" xml:space="preserve">
-    <value>Este numero necesita registro. Usa registro por telefono en este dispositivo.</value>
+    <value>Este número necesita registro. Usa registro por teléfono en este dispositivo.</value>
   </data>
   <data name="QrLoginStatusRetry" xml:space="preserve">
     <value>No se pudo conectar con Telegram. Toca reintentar.</value>
+  </data>
+  <data name="QrLoginStatusNetworkBlocked" xml:space="preserve">
+    <value>Tu red parece bloquear este servidor de Telegram. Intenta con tu número de teléfono o configura MTProxy.</value>
   </data>
   <data name="QrLoginRetryButton.Content" xml:space="preserve">
     <value>Reintentar</value>
@@ -459,7 +468,7 @@
     <value>cuenta nueva</value>
   </data>
   <data name="SignUpDescription.Text" xml:space="preserve">
-    <value>este numero es nuevo en telegram. ingresa tu nombre para crear la cuenta.</value>
+    <value>este número es nuevo en telegram. ingresa tu nombre para crear la cuenta.</value>
   </data>
   <data name="SignUpFirstNameInput.PlaceholderText" xml:space="preserve">
     <value>nombre</value>

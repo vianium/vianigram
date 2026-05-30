@@ -108,6 +108,14 @@ namespace Vianigram.Account.Ports.Outbound
         bool SwitchDcForQrMigration(int dcId);
 
         /// <summary>
+        /// Restore the unauthenticated transport to the default anonymous
+        /// login DC after a post-migrate import fails. The next QR refresh
+        /// should export a new token from the anonymous DC instead of
+        /// staying pinned to the failed migrate DC.
+        /// </summary>
+        void ResetQrMigrationAfterFailure();
+
+        /// <summary>
         /// Generate (and persist) the auth_key for <paramref name="dcId"/>
         /// without changing the current channel or DC. Cheap no-op when the
         /// key is already cached. The QR-login VM fires this in the

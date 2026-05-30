@@ -65,7 +65,11 @@ namespace Vianigram.Chats.Infrastructure
         // flags 3..10 are present the stream cursor is left dangling and
         // ReadDialog must early-return (which the caller already does).
         public const uint CtorPeerNotifySettings = 0x99622c0c;
+        public const uint CtorMessage = 0x9815cec8;             // message#9815cec8
         public const uint CtorMessageEmpty = 0x90a6ca84;        // messageEmpty (skip)
+        public const uint CtorMessageService = 0x7a800e0a;      // messageService layer 214
+        public const uint CtorMessageServiceLegacy = 0x2b085862;// messageService legacy
+        public const uint CtorMessageServiceCall = 0x1f1c25e9;  // call service message
         public const uint CtorUserMin = 0x3ec43dab;             // not exact; we don't parse users richly
         public const uint CtorChatMin = 0x41cbf256;             // ditto
 
@@ -132,9 +136,6 @@ namespace Vianigram.Chats.Infrastructure
                 // dialogs: Vector<Dialog>
                 ExpectVector(r);
                 int dialogCount = r.ReadInt32();
-                long latestDate = 0;
-                long latestId = 0;
-                PeerId latestPeer = null;
 
                 for (int i = 0; i < dialogCount; i++)
                 {
@@ -145,27 +146,6 @@ namespace Vianigram.Chats.Infrastructure
                         if (d != null)
                         {
                             result.Dialogs.Add(d);
-                            // Cursor synthesis: Telegram's
-                            // messages.getDialogs returns dialogs sorted
-                            // by last activity DESC (newest first). The
-                            // "next page" cursor needs the OLDEST
-                            // (boundary) dialog, not the newest — the
-                            // server interprets offset_date as "give me
-                            // dialogs older than this", so passing the
-                            // newest's date returns essentially the same
-                            // page again (de-dup catches them, total
-                            // gets stuck — that was the chatlist bug).
-                            //
-                            // Track the LAST dialog read in this loop:
-                            // because the server already sorted them
-                            // newest-first, the last one we read here is
-                            // the boundary the next call should start
-                            // from. Unconditional assignment — each
-                            // iteration overwrites; final value is what
-                            // we want.
-                            latestId = d.LastMessageId;
-                            latestPeer = d.Peer;
-                            latestDate = DateTimeToUnix(d.LastActivityAt);
                         }
                     }
                     else if (dctor == CtorDialogFolder)
@@ -188,21 +168,204 @@ namespace Vianigram.Chats.Infrastructure
                     }
                 }
 
-                // messages: Vector<Message>  — skipped (Messages context owns these).
+                // messages: Vector<Message>  — skim id/date/peer before we stop.
                 // chats:    Vector<Chat>     — skim titles only.
                 // users:    Vector<User>     — skim titles only.
                 // We don't have to consume them precisely if we stop reading here. For
                 // a handler that only needs Dialog rows, that's acceptable in V1.
                 // Title hydration is a deferral (see README in this folder).
 
+                ApplyMessageDates(result.Dialogs, ReadMessageDates(r, ms));
+
                 result.HasMore = isSlice && dialogCount < sliceCount;
-                if (latestPeer != null)
+                if (result.Dialogs.Count > 0)
                 {
-                    var nextDate = UnixToDateTime(latestDate);
-                    result.NextCursor = new DialogCursor(nextDate, latestId, latestPeer);
+                    Dialog boundary = result.Dialogs[result.Dialogs.Count - 1];
+                    result.NextCursor = new DialogCursor(
+                        boundary.LastActivityAt,
+                        boundary.LastMessageId,
+                        boundary.Peer);
                 }
                 return result;
             }
+        }
+
+        private struct MessageDateReadResult
+        {
+            public PeerId Peer;
+            public int MessageId;
+            public DateTime Date;
+            public bool HasValue;
+            public bool NeedsBail;
+
+            public static MessageDateReadResult Empty()
+            {
+                return new MessageDateReadResult();
+            }
+
+            public static MessageDateReadResult Scan()
+            {
+                return new MessageDateReadResult { NeedsBail = true };
+            }
+
+            public static MessageDateReadResult Bail(PeerId peer, int messageId, DateTime date)
+            {
+                return new MessageDateReadResult
+                {
+                    Peer = peer,
+                    MessageId = messageId,
+                    Date = date,
+                    HasValue = peer != null && messageId > 0,
+                    NeedsBail = true
+                };
+            }
+        }
+
+        private static IDictionary<string, DateTime> ReadMessageDates(BinaryReader r, MemoryStream ms)
+        {
+            var dates = new Dictionary<string, DateTime>();
+            try
+            {
+                ExpectVector(r);
+                int count = r.ReadInt32();
+                if (count < 0 || count > 4096) return dates;
+
+                int skipBudget = count + 8;
+                for (int i = 0; i < count; i++)
+                {
+                    if (ms.Position >= ms.Length) break;
+
+                    MessageDateReadResult res;
+                    try
+                    {
+                        res = ReadOneMessageDate(r);
+                    }
+                    catch
+                    {
+                        if (skipBudget-- <= 0) break;
+                        if (!TryAdvanceToNextMessageCtor(r, ms)) break;
+                        continue;
+                    }
+
+                    if (res.HasValue)
+                    {
+                        dates[MakeMessageKey(res.Peer, res.MessageId)] = res.Date;
+                    }
+
+                    if (res.NeedsBail)
+                    {
+                        if (skipBudget-- <= 0) break;
+                        if (!TryAdvanceToNextMessageCtor(r, ms)) break;
+                    }
+                }
+            }
+            catch
+            {
+                // Keep dialog decoding tolerant. Missing message dates only
+                // degrade pagination; they should not blank the chat list.
+            }
+            return dates;
+        }
+
+        private static MessageDateReadResult ReadOneMessageDate(BinaryReader r)
+        {
+            uint ctor = r.ReadUInt32();
+            switch (ctor)
+            {
+                case CtorMessageEmpty:
+                {
+                    uint flags = r.ReadUInt32();
+                    r.ReadInt32();  // id
+                    PeerId ignored;
+                    if ((flags & 1u) != 0 && !TryReadPeer(r, out ignored)) return MessageDateReadResult.Scan();
+                    return MessageDateReadResult.Empty();
+                }
+
+                case CtorMessage:
+                {
+                    uint flags = r.ReadUInt32();
+                    uint flags2 = r.ReadUInt32();
+                    int id = r.ReadInt32();
+                    if (id <= 0) return MessageDateReadResult.Empty();
+
+                    PeerId ignored;
+                    if ((flags & (1u << 8)) != 0 && !TryReadPeer(r, out ignored)) return MessageDateReadResult.Scan();
+                    if ((flags & (1u << 29)) != 0) r.ReadInt32();
+                    PeerId peer;
+                    if (!TryReadPeer(r, out peer)) return MessageDateReadResult.Scan();
+                    if ((flags & (1u << 28)) != 0 && !TryReadPeer(r, out ignored)) return MessageDateReadResult.Scan();
+                    if ((flags & (1u << 2)) != 0 && !TrySkipMessageFwdHeader(r)) return MessageDateReadResult.Scan();
+                    if ((flags & (1u << 11)) != 0) r.ReadInt64();
+                    if ((flags2 & (1u << 0)) != 0) r.ReadInt64();
+                    if ((flags & (1u << 3)) != 0 && !TrySkipMessageReplyHeader(r)) return MessageDateReadResult.Scan();
+
+                    int date = r.ReadInt32();
+                    return MessageDateReadResult.Bail(peer, id, UnixToDateTime(date));
+                }
+
+                case CtorMessageService:
+                case CtorMessageServiceLegacy:
+                case CtorMessageServiceCall:
+                {
+                    bool hasFlags2 = ctor == CtorMessageService;
+                    uint flags = r.ReadUInt32();
+                    if (hasFlags2) r.ReadUInt32();
+                    int id = r.ReadInt32();
+                    if (id <= 0) return MessageDateReadResult.Empty();
+
+                    PeerId ignored;
+                    if ((flags & (1u << 8)) != 0 && !TryReadPeer(r, out ignored)) return MessageDateReadResult.Scan();
+                    PeerId peer;
+                    if (!TryReadPeer(r, out peer)) return MessageDateReadResult.Scan();
+                    if ((flags & (1u << 28)) != 0 && !TryReadPeer(r, out ignored)) return MessageDateReadResult.Scan();
+                    if ((flags & (1u << 3)) != 0 && !TrySkipMessageReplyHeader(r)) return MessageDateReadResult.Scan();
+
+                    int date = r.ReadInt32();
+                    return MessageDateReadResult.Bail(peer, id, UnixToDateTime(date));
+                }
+
+                default:
+                    return MessageDateReadResult.Scan();
+            }
+        }
+
+        private static void ApplyMessageDates(IList<Dialog> dialogs, IDictionary<string, DateTime> messageDates)
+        {
+            if (dialogs == null || messageDates == null || messageDates.Count == 0) return;
+
+            for (int i = 0; i < dialogs.Count; i++)
+            {
+                Dialog dialog = dialogs[i];
+                DateTime serverDate;
+                if (dialog == null ||
+                    !messageDates.TryGetValue(MakeMessageKey(dialog.Peer, dialog.LastMessageId), out serverDate))
+                {
+                    continue;
+                }
+
+                dialog.ApplyServerUpdate(
+                    title: dialog.Title,
+                    photoSmallUrl: dialog.PhotoSmallUrl,
+                    lastActivityAt: serverDate,
+                    lastMessageId: dialog.LastMessageId,
+                    unreadCount: dialog.UnreadCount,
+                    isPinned: dialog.IsPinned,
+                    isMuted: dialog.IsMuted,
+                    mutedUntil: dialog.MutedUntil,
+                    isVerified: dialog.IsVerified,
+                    isScam: dialog.IsScam,
+                    isArchived: dialog.IsArchived,
+                    folderId: dialog.FolderId,
+                    at: serverDate);
+                dialog.DequeuePendingEvents();
+            }
+        }
+
+        private static string MakeMessageKey(PeerId peer, long messageId)
+        {
+            return peer == null
+                ? string.Empty
+                : peer.ToString() + "#" + messageId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
         // dialog#d58a08c6 flags:# pinned:flags.2?true unread_mark:flags.3?true
@@ -439,6 +602,46 @@ namespace Vianigram.Chats.Infrastructure
             }
         }
 
+        private static bool TryReadPeer(BinaryReader r, out PeerId peer)
+        {
+            peer = null;
+            if (r == null || r.BaseStream == null) return false;
+            long start = r.BaseStream.Position;
+            try
+            {
+                if (start + 12 > r.BaseStream.Length) return false;
+                uint ctor = r.ReadUInt32();
+                long id;
+                switch (ctor)
+                {
+                    case CtorPeerUser:
+                        id = r.ReadInt64();
+                        if (id <= 0) { r.BaseStream.Position = start; return false; }
+                        peer = PeerId.User(id, 0L);
+                        return true;
+                    case CtorPeerChat:
+                        id = r.ReadInt64();
+                        if (id <= 0) { r.BaseStream.Position = start; return false; }
+                        peer = PeerId.Chat(id);
+                        return true;
+                    case CtorPeerChannel:
+                        id = r.ReadInt64();
+                        if (id <= 0) { r.BaseStream.Position = start; return false; }
+                        peer = PeerId.Channel(id, 0L);
+                        return true;
+                    default:
+                        r.BaseStream.Position = start;
+                        return false;
+                }
+            }
+            catch
+            {
+                r.BaseStream.Position = start;
+                peer = null;
+                return false;
+            }
+        }
+
         // peerNotifySettings#99622c0c flags:#
         //   show_previews:flags.0?Bool  silent:flags.1?Bool  mute_until:flags.2?int
         //   ios_sound:flags.3?NotificationSound
@@ -534,6 +737,97 @@ namespace Vianigram.Chats.Infrastructure
             if (ctor == CtorBoolTrue) return true;
             if (ctor == CtorBoolFalse) return false;
             throw new InvalidDataException("Expected Bool constructor, got 0x" + ctor.ToString("x8"));
+        }
+
+        private static bool TrySkipMessageFwdHeader(BinaryReader r)
+        {
+            try
+            {
+                r.ReadUInt32();                                  // ctor
+                uint flags = r.ReadUInt32();
+                PeerId ignored;
+                if ((flags & (1u << 0)) != 0 && !TryReadPeer(r, out ignored)) return false;
+                if ((flags & (1u << 5)) != 0) ReadString(r);     // from_name
+                r.ReadInt32();                                  // date
+                if ((flags & (1u << 2)) != 0) r.ReadInt32();     // channel_post
+                if ((flags & (1u << 3)) != 0) ReadString(r);     // post_author
+                if ((flags & (1u << 4)) != 0)
+                {
+                    if (!TryReadPeer(r, out ignored)) return false;
+                    r.ReadInt32();                              // saved_from_msg_id
+                }
+                if ((flags & (1u << 8)) != 0 && !TryReadPeer(r, out ignored)) return false;
+                if ((flags & (1u << 9)) != 0) ReadString(r);     // saved_from_name
+                if ((flags & (1u << 10)) != 0) r.ReadInt32();    // saved_date
+                if ((flags & (1u << 6)) != 0) ReadString(r);     // psa_type
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool TrySkipMessageReplyHeader(BinaryReader r)
+        {
+            try
+            {
+                r.ReadUInt32();                                  // ctor
+                uint flags = r.ReadUInt32();
+                PeerId ignored;
+                if ((flags & (1u << 4)) != 0) r.ReadInt32();     // reply_to_msg_id
+                if ((flags & (1u << 0)) != 0 && !TryReadPeer(r, out ignored)) return false;
+                if ((flags & (1u << 5)) != 0 && !TrySkipMessageFwdHeader(r)) return false;
+                if ((flags & (1u << 8)) != 0) return false;      // reply_media
+                if ((flags & (1u << 1)) != 0) r.ReadInt32();     // reply_to_top_id
+                if ((flags & (1u << 6)) != 0) ReadString(r);     // quote_text
+                if ((flags & (1u << 7)) != 0) return false;      // quote_entities
+                if ((flags & (1u << 10)) != 0) r.ReadInt32();    // quote_offset
+                if ((flags & (1u << 11)) != 0) r.ReadInt32();    // todo_item_id
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool TryAdvanceToNextMessageCtor(BinaryReader r, MemoryStream ms)
+        {
+            if (r == null || ms == null) return false;
+
+            long pos = ms.Position;
+            if ((pos & 3L) != 0)
+            {
+                long aligned = (pos + 3L) & ~3L;
+                if (aligned > ms.Length) return false;
+                ms.Position = aligned;
+            }
+
+            while (ms.Position + 4 <= ms.Length)
+            {
+                long candidatePos = ms.Position;
+                uint candidate;
+                try
+                {
+                    candidate = r.ReadUInt32();
+                }
+                catch
+                {
+                    return false;
+                }
+
+                if (candidate == CtorMessage
+                    || candidate == CtorMessageService
+                    || candidate == CtorMessageServiceLegacy
+                    || candidate == CtorMessageServiceCall
+                    || candidate == CtorMessageEmpty)
+                {
+                    ms.Position = candidatePos;
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static void ExpectVector(BinaryReader r)

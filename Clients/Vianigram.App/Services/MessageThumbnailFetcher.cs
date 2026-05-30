@@ -120,6 +120,7 @@ namespace Vianigram.App.Services
             string producedPath = null;
             try
             {
+                ct.ThrowIfCancellationRequested();
                 MediaThumbnail chosen = ChooseThumb(thumbnails);
                 if (chosen == null)
                 {
@@ -139,6 +140,7 @@ namespace Vianigram.App.Services
                 MediaCacheEntry hit = null;
                 try { hit = await _cache.TryGetAsync(location, ct).ConfigureAwait(false); }
                 catch { /* best-effort */ }
+                ct.ThrowIfCancellationRequested();
 
                 byte[] bytes = hit != null ? hit.Payload : null;
                 if (bytes == null || bytes.Length == 0)
@@ -158,8 +160,10 @@ namespace Vianigram.App.Services
                         }
                         return null;
                     }
+                    ct.ThrowIfCancellationRequested();
                     try { hit = await _cache.TryGetAsync(location, ct).ConfigureAwait(false); }
                     catch { hit = null; }
+                    ct.ThrowIfCancellationRequested();
                     bytes = hit != null ? hit.Payload : null;
                 }
 
@@ -168,7 +172,9 @@ namespace Vianigram.App.Services
                     return null;
                 }
 
+                ct.ThrowIfCancellationRequested();
                 producedPath = await PersistAsync(photoId, chosen.SizeType, bytes, ct).ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
                 if (_log != null)
                 {
                     _log.Info("thumb.fetch ok photoId=" + photoId +

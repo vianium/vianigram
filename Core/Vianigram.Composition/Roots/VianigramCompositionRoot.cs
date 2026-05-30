@@ -241,11 +241,11 @@ namespace Vianigram.Composition.Roots
                     if (targetDcId > 0) targetDcSource = "home";
                 }
 
-                if (targetDcId <= 0)
-                {
-                    targetDcId = preferredStore.GetLoginDcHint();
-                    if (targetDcId > 0) targetDcSource = "login-hint";
-                }
+                // Do not seed anonymous QR login from a prior login-hint.
+                // The observed happy path starts on TelegramAppConfig.ActiveDcId
+                // and lets auth.exportLoginToken return loginTokenMigrateTo
+                // when the account's home DC differs. Reusing a stale hint can
+                // leave QR polling on a DC where the token stays Pending.
             }
             catch
             {
@@ -333,6 +333,90 @@ namespace Vianigram.Composition.Roots
             phaseSw.Stop();
             EarlyLog.Write("Boot", "storage-build elapsed=" +
                 phaseSw.ElapsedMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture) + "ms");
+
+            // Wire persistent endpoint health into TelegramDcOptions. This
+            // is fire-and-forget: hydration is best-effort and the auth_key
+            // race continues to work (in process-only mode) if it never
+            // completes. AttachPersistentHealthStoreAsync prunes >7-day
+            // rows first, then loads the rest into the in-memory dict, then
+            // installs the store for write-through on subsequent calls.
+            if (storage.EndpointHealthStore != null)
+            {
+                // Intentionally fire-and-forget; the discard local
+                // silences CS4014 without losing exception observation
+                // (the inner try/catch logs failures).
+                var endpointHealthAttachTask = Task.Run(async delegate
+                {
+                    try
+                    {
+                        await TelegramDcOptions
+                            .AttachPersistentHealthStoreAsync(
+                                storage.EndpointHealthStore,
+                                System.Threading.CancellationToken.None)
+                            .ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        EarlyLog.Write(
+                            "Boot",
+                            "endpoint-health attach failed: " +
+                            ex.GetType().Name + ": " + ex.Message);
+                    }
+                });
+                GC.KeepAlive(endpointHealthAttachTask);
+            }
+
+            // Avatar bytes cache — persistent JPEG/PNG store keyed by
+            // photo_id. Consumed by PeerAvatarFetcher to short-circuit
+            // upload.getFile on repeated logins. Registered as a service
+            // so the App-layer fetcher resolves it via the standard
+            // TryResolve path; null in the JSON-fallback boot mode and
+            // the fetcher degrades to its pre-cache behaviour.
+            if (storage.AvatarCacheStore != null)
+            {
+                root.Register<Vianigram.Storage.Ports.Stubs.IAvatarCacheStore>(storage.AvatarCacheStore);
+            }
+
+            // Imported-authorization cache — persistent (user_id,
+            // target_dc_id) -> auth_blob store. Consumed by
+            // MtProtoChannelAdapter.ImportMediaAuthorizationCoreAsync
+            // to skip auth.exportAuthorization on cache hit, turning a
+            // two-RPC media-DC bootstrap (~350-500 ms per DC) into a
+            // single auth.importAuthorization (~150-200 ms). Registered
+            // as a service so the adapter resolves it lazily; null in the
+            // JSON-fallback boot mode and the adapter falls back to the
+            // live export+import path.
+            if (storage.ImportedAuthorizationCacheStore != null)
+            {
+                root.Register<Vianigram.Storage.Ports.Stubs.IImportedAuthorizationCacheStore>(
+                    storage.ImportedAuthorizationCacheStore);
+            }
+
+            // Same pattern for the dc_options store, fed by the help.getConfig
+            // call that fires after the first successful DC open.
+            if (storage.DcOptionsStore != null)
+            {
+                // Same fire-and-forget pattern; see endpoint-health above.
+                var dcOptionsAttachTask = Task.Run(async delegate
+                {
+                    try
+                    {
+                        await TelegramDcOptions
+                            .AttachPersistentDcOptionsStoreAsync(
+                                storage.DcOptionsStore,
+                                System.Threading.CancellationToken.None)
+                            .ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        EarlyLog.Write(
+                            "Boot",
+                            "dc-options attach failed: " +
+                            ex.GetType().Name + ": " + ex.Message);
+                    }
+                });
+                GC.KeepAlive(dcOptionsAttachTask);
+            }
 
             // Bridge the encrypted JsonAuthKeyStore to the Account port shape.
             var authKeyStore = new BridgeAuthKeyStore(storage.AuthKeyStore);
@@ -658,6 +742,84 @@ namespace Vianigram.Composition.Roots
                     "Composition.Root",
                     "rehydrate threw, continuing with Anonymous: " + ex.GetType().Name + ": " + ex.Message);
             }
+
+            if (concreteMainAdapter != null)
+            {
+                var capturedAdapter = concreteMainAdapter;
+                var capturedAccountApi = accountApi;
+                capturedAdapter.SetAuthorizationGate(delegate
+                {
+                    var state = capturedAccountApi.CurrentState;
+                    return state != null &&
+                        state.StateKind == Vianigram.Account.Domain.ValueObjects.AuthState.AuthStateKind.Authorized;
+                });
+
+                // Imported-authorization cache wiring. The userId provider
+                // pulls the current authorized user_id from the Account
+                // aggregate every time MediaDc.ImportMediaAuthorizationCoreAsync
+                // runs — that way a re-login under a different user
+                // (multi-account installs) lands in the right cache row.
+                // The cache itself is null when storage fell through to
+                // the JSON path; ConfigureImportedAuthorizationCache treats
+                // null as "disabled" and the adapter resumes the live
+                // export+import path.
+                Vianigram.Storage.Ports.Stubs.IImportedAuthorizationCacheStore importedAuthCache;
+                if (root.TryResolve<Vianigram.Storage.Ports.Stubs.IImportedAuthorizationCacheStore>(out importedAuthCache))
+                {
+                    var capturedImportedAuthCache = importedAuthCache;
+                    capturedAdapter.ConfigureImportedAuthorizationCache(
+                        capturedImportedAuthCache,
+                        delegate
+                        {
+                            var state = capturedAccountApi.CurrentState;
+                            if (state == null) return 0L;
+                            if (state.StateKind != Vianigram.Account.Domain.ValueObjects.AuthState.AuthStateKind.Authorized) return 0L;
+                            return state.UserId.HasValue ? state.UserId.Value : 0L;
+                        });
+                    compLog.Info("ImportedAuthorizationCache wired (media DC bootstrap cache active).");
+                }
+
+                accountApi.StateChanged += delegate(object sender, Vianigram.Account.Application.AccountStateChanged args)
+                {
+                    var snapshot = args != null ? args.Snapshot : capturedAccountApi.CurrentState;
+                    if (snapshot == null ||
+                        snapshot.StateKind != Vianigram.Account.Domain.ValueObjects.AuthState.AuthStateKind.Authorized)
+                    {
+                        capturedAdapter.ParkAfterLogout();
+
+                        // Evict cached cross-DC auth blobs for the user
+                        // that just logged out. Best-effort: a stale row
+                        // can't break a future login (the blob is
+                        // user-scoped and a fresh export overrides it
+                        // anyway) but cleaning up keeps the table from
+                        // accumulating entries across account swaps.
+                        var loggedOutUserId = snapshot != null && snapshot.UserId.HasValue ? snapshot.UserId.Value : 0L;
+                        if (loggedOutUserId != 0L)
+                        {
+                            Vianigram.Storage.Ports.Stubs.IImportedAuthorizationCacheStore evictCache;
+                            if (root.TryResolve<Vianigram.Storage.Ports.Stubs.IImportedAuthorizationCacheStore>(out evictCache) && evictCache != null)
+                            {
+                                Task.Run(async delegate
+                                {
+                                    try
+                                    {
+                                        await evictCache
+                                            .EvictAllForUserAsync(loggedOutUserId, CancellationToken.None)
+                                            .ConfigureAwait(false);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        EarlyLog.Write(
+                                            "Composition.Root",
+                                            "imported-auth cache evict-on-logout failed userId=" +
+                                            loggedOutUserId + " " + ex.GetType().Name + ": " + ex.Message);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                };
+            }
             phaseSw.Stop();
             EarlyLog.Write("Boot", "ctx-Account elapsed=" + phaseSw.ElapsedMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture) + "ms");
 
@@ -922,7 +1084,13 @@ namespace Vianigram.Composition.Roots
                         return api as Vianigram.Calls.Application.CallsApplication;
                     },
                     eventBus,
-                    clock);
+                    clock,
+                    delegate
+                    {
+                        var snapshot = accountApi.CurrentState;
+                        return snapshot != null
+                            && snapshot.StateKind == Vianigram.Account.Domain.ValueObjects.AuthState.AuthStateKind.Authorized;
+                    });
                 root.Register<CallsUpdatePoller>(callsPoller);
                 compLog.Info("CallsUpdatePoller wired (updates.getDifference fallback for calls).");
             }

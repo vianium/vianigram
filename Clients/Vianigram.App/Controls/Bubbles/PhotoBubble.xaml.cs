@@ -4,6 +4,7 @@
 using System;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -61,6 +62,14 @@ namespace Vianigram.App.Controls.Bubbles
         public static readonly DependencyProperty DownloadProgressProperty =
             DependencyProperty.Register("DownloadProgress", typeof(double), typeof(PhotoBubble),
                 new PropertyMetadata(0.0, OnLoadingChanged));
+
+        public static readonly DependencyProperty OpenPathProperty =
+            DependencyProperty.Register("OpenPath", typeof(string), typeof(PhotoBubble),
+                new PropertyMetadata("", OnLoadingChanged));
+
+        public static readonly DependencyProperty OverlayTextProperty =
+            DependencyProperty.Register("OverlayText", typeof(string), typeof(PhotoBubble),
+                new PropertyMetadata("", OnOverlayChanged));
 
         public string ImageSource
         {
@@ -128,6 +137,18 @@ namespace Vianigram.App.Controls.Bubbles
             set { SetValue(DownloadProgressProperty, value); }
         }
 
+        public string OpenPath
+        {
+            get { return (string)GetValue(OpenPathProperty); }
+            set { SetValue(OpenPathProperty, value); }
+        }
+
+        public string OverlayText
+        {
+            get { return (string)GetValue(OverlayTextProperty); }
+            set { SetValue(OverlayTextProperty, value); }
+        }
+
         public event EventHandler DownloadRequested;
         public event EventHandler OpenRequested;
         public event EventHandler ImageLoadFailed;
@@ -136,12 +157,19 @@ namespace Vianigram.App.Controls.Bubbles
         public PhotoBubble()
         {
             InitializeComponent();
+            BubbleInteractionHelpers.EnableTextSelection(CaptionText);
             CaptionText.Tapped += CaptionText_Tapped;
+            if (RootGrid != null)
+            {
+                RootGrid.Holding += OnBubbleHolding;
+                RootGrid.RightTapped += OnBubbleRightTapped;
+            }
             ApplyImage();
             ApplyCaption();
             ApplyAlignment();
             ApplySize();
             ApplyLoadingState();
+            ApplyOverlay();
         }
 
         private static void OnImageSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -172,6 +200,12 @@ namespace Vianigram.App.Controls.Bubbles
         {
             PhotoBubble b = d as PhotoBubble;
             if (b != null) b.ApplyLoadingState();
+        }
+
+        private static void OnOverlayChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            PhotoBubble b = d as PhotoBubble;
+            if (b != null) b.ApplyOverlay();
         }
 
         private async void ApplyImage()
@@ -353,12 +387,55 @@ namespace Vianigram.App.Controls.Bubbles
             if (LoadingOverlay == null || FailureOverlay == null) return;
 
             bool hasProgress = DownloadProgress > 0 && DownloadProgress < 100;
+            bool downloading = IsLoading || hasProgress;
+            bool needsDownload = string.IsNullOrWhiteSpace(OpenPath);
+            bool isPlayable = !string.IsNullOrWhiteSpace(OverlayText);
             LoadingOverlay.Visibility = IsLoading || hasProgress ? Visibility.Visible : Visibility.Collapsed;
             LoadingRing.IsActive = IsLoading && !hasProgress;
             LoadingRing.Visibility = LoadingRing.IsActive ? Visibility.Visible : Visibility.Collapsed;
             DownloadProgressBar.Value = Clamp(DownloadProgress, 0, 100);
             DownloadProgressBar.Visibility = hasProgress ? Visibility.Visible : Visibility.Collapsed;
             FailureOverlay.Visibility = HasFailed ? Visibility.Visible : Visibility.Collapsed;
+
+            if (ActionBadge != null && ActionGlyph != null)
+            {
+                if (HasFailed)
+                {
+                    ActionBadge.Visibility = Visibility.Visible;
+                    ActionGlyph.Text = "\uE72C";
+                }
+                else if (downloading)
+                {
+                    ActionBadge.Visibility = Visibility.Visible;
+                    ActionGlyph.Text = "\uE711";
+                }
+                else if (needsDownload)
+                {
+                    ActionBadge.Visibility = Visibility.Visible;
+                    ActionGlyph.Text = "\uE896";
+                }
+                else if (isPlayable)
+                {
+                    ActionBadge.Visibility = Visibility.Visible;
+                    ActionGlyph.Text = "\uE102";
+                }
+                else
+                {
+                    ActionBadge.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        private void ApplyOverlay()
+        {
+            if (MediaBadge == null || MediaBadgeText == null) return;
+
+            string text = OverlayText ?? string.Empty;
+            MediaBadgeText.Text = text;
+            MediaBadge.Visibility = string.IsNullOrEmpty(text)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            ApplyLoadingState();
         }
 
         private void CaptionText_Tapped(object sender, TappedRoutedEventArgs e)
@@ -370,7 +447,28 @@ namespace Vianigram.App.Controls.Bubbles
 
         private void OnPhotoTapped(object sender, TappedRoutedEventArgs e)
         {
-            if (HasFailed || PhotoImage.Source == null)
+            if (HasFailed)
+            {
+                EventHandler download = DownloadRequested;
+                if (download != null) download(this, EventArgs.Empty);
+                return;
+            }
+
+            string openPath = ResolveOpenPath();
+            if (!string.IsNullOrEmpty(openPath))
+            {
+                EventHandler openHandler = OpenRequested;
+                if (openHandler != null)
+                {
+                    openHandler(this, EventArgs.Empty);
+                    return;
+                }
+
+                OpenMediaAsync(openPath);
+                return;
+            }
+
+            if (PhotoImage.Source == null)
             {
                 EventHandler download = DownloadRequested;
                 if (download != null) download(this, EventArgs.Empty);
@@ -379,6 +477,72 @@ namespace Vianigram.App.Controls.Bubbles
 
             EventHandler open = OpenRequested;
             if (open != null) open(this, EventArgs.Empty);
+        }
+
+        private void OnBubbleHolding(object sender, HoldingRoutedEventArgs e)
+        {
+            if (e == null || e.HoldingState != Windows.UI.Input.HoldingState.Started) return;
+            if (BubbleInteractionHelpers.IsFrom(CaptionText, e.OriginalSource)) return;
+
+            ShowCopyCaptionMenu();
+            e.Handled = true;
+        }
+
+        private void OnBubbleRightTapped(object sender, RightTappedRoutedEventArgs e)
+        {
+            ShowCopyCaptionMenu();
+            if (e != null) e.Handled = true;
+        }
+
+        private void ShowCopyCaptionMenu()
+        {
+            string caption = Caption ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(caption)) return;
+
+            BubbleInteractionHelpers.ShowCopyTextFlyout(
+                BubbleBorder != null ? (FrameworkElement)BubbleBorder : this,
+                caption,
+                "Copy caption");
+        }
+
+        private string ResolveOpenPath()
+        {
+            if (!string.IsNullOrWhiteSpace(OpenPath)) return OpenPath;
+            if (!string.IsNullOrWhiteSpace(ImagePath)) return ImagePath;
+            if (!string.IsNullOrWhiteSpace(ImageSource)) return ImageSource;
+            return string.Empty;
+        }
+
+        private async void OpenMediaAsync(string source)
+        {
+            try
+            {
+                Frame frame = Window.Current != null ? Window.Current.Content as Frame : null;
+                if (frame != null && frame.Navigate(typeof(Vianigram.App.Pages.Media.MediaViewerPage), source))
+                    return;
+
+                await LaunchFileAsync(source);
+            }
+            catch
+            {
+                MarkImageFailed();
+            }
+        }
+
+        private static async System.Threading.Tasks.Task LaunchFileAsync(string source)
+        {
+            if (string.IsNullOrWhiteSpace(source)) return;
+
+            Uri uri;
+            if (Uri.TryCreate(source, UriKind.Absolute, out uri) && !uri.IsFile)
+            {
+                await Launcher.LaunchUriAsync(uri);
+                return;
+            }
+
+            string path = uri != null && uri.IsFile ? uri.LocalPath : source;
+            StorageFile file = await StorageFile.GetFileFromPathAsync(path);
+            if (file != null) await Launcher.LaunchFileAsync(file);
         }
 
         private void OnImageOpened(object sender, RoutedEventArgs e)

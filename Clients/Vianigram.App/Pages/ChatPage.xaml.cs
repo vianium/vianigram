@@ -24,10 +24,13 @@
 using System;
 using System.Collections.Specialized;
 using System.Threading;
+using System.Threading.Tasks;
+using Vianigram.App.Controls.Bubbles;
 using Vianigram.App.ViewModels;
 using Vianigram.App.ViewModels.Pages;
 using Vianigram.Kernel.Logging;
 using Vianigram.Messages.Ports.Inbound;
+using Windows.Storage;
 using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -218,6 +221,148 @@ namespace Vianigram.App.Pages
             e.Handled = true;
             bool sent = await _vm.SendAsync(CancellationToken.None).ConfigureAwait(true);
             if (sent) ScrollToLatest();
+        }
+
+        private async void OnDocumentDownloadRequested(object sender, EventArgs e)
+        {
+            DocumentBubble bubble = sender as DocumentBubble;
+            MessageRow row = bubble != null ? bubble.DataContext as MessageRow : null;
+            if (_vm == null || row == null)
+            {
+                if (bubble != null) bubble.SetFailed();
+                return;
+            }
+
+            string path = await _vm.DownloadDocumentAsync(row, CancellationToken.None).ConfigureAwait(true);
+            if (string.IsNullOrEmpty(path))
+            {
+                if (bubble != null) bubble.SetFailed();
+                return;
+            }
+
+            bool launched = await LaunchLocalFileAsync(path).ConfigureAwait(true);
+            if (!launched && bubble != null) bubble.SetFailed();
+        }
+
+        private async void OnDocumentOpenRequested(object sender, EventArgs e)
+        {
+            DocumentBubble bubble = sender as DocumentBubble;
+            MessageRow row = bubble != null ? bubble.DataContext as MessageRow : null;
+            string path = row != null ? row.FilePath : (bubble != null ? bubble.FilePath : string.Empty);
+            bool launched = await LaunchLocalFileAsync(path).ConfigureAwait(true);
+            if (!launched && bubble != null) bubble.SetFailed();
+        }
+
+        private async void OnMediaDownloadRequested(object sender, EventArgs e)
+        {
+            await DownloadAndOpenMediaAsync(sender as PhotoBubble).ConfigureAwait(true);
+        }
+
+        private async void OnMediaOpenRequested(object sender, EventArgs e)
+        {
+            await DownloadAndOpenMediaAsync(sender as PhotoBubble).ConfigureAwait(true);
+        }
+
+        private async Task DownloadAndOpenMediaAsync(PhotoBubble bubble)
+        {
+            MessageRow row = bubble != null ? bubble.DataContext as MessageRow : null;
+            if (_vm == null || row == null)
+            {
+                if (bubble != null) bubble.HasFailed = true;
+                return;
+            }
+
+            string path = row.MediaFullPath;
+            if (string.IsNullOrEmpty(path))
+            {
+                path = IsBufferedVisual(row)
+                    ? await _vm.BufferMediaAsync(row, CancellationToken.None).ConfigureAwait(true)
+                    : await _vm.DownloadMediaAsync(row, CancellationToken.None).ConfigureAwait(true);
+            }
+
+            if (string.IsNullOrEmpty(path))
+            {
+                if (bubble != null) bubble.HasFailed = true;
+                return;
+            }
+
+            if (bubble != null)
+            {
+                bubble.OpenPath = path;
+                if (row.Kind == MessageRowKind.Photo)
+                {
+                    bubble.ImageSource = path;
+                    bubble.ImagePath = path;
+                }
+            }
+
+            bool opened = OpenInMediaViewer(path);
+            if (!opened)
+                opened = await LaunchLocalFileAsync(path).ConfigureAwait(true);
+            if (!opened && bubble != null) bubble.HasFailed = true;
+        }
+
+        private async void OnAudioDownloadRequested(object sender, EventArgs e)
+        {
+            VoiceBubble bubble = sender as VoiceBubble;
+            MessageRow row = bubble != null ? bubble.DataContext as MessageRow : null;
+            if (_vm == null || row == null)
+            {
+                if (bubble != null) bubble.HasFailed = true;
+                return;
+            }
+
+            string path = await _vm.BufferMediaAsync(row, CancellationToken.None).ConfigureAwait(true);
+            if (string.IsNullOrEmpty(path))
+            {
+                if (bubble != null) bubble.HasFailed = true;
+                return;
+            }
+
+            if (bubble != null)
+            {
+                bubble.AudioSource = path;
+                bubble.IsDownloading = false;
+                bubble.HasFailed = false;
+                bubble.DownloadProgress = 100.0;
+                await bubble.PlayAsync().ConfigureAwait(true);
+            }
+        }
+
+        private static bool IsBufferedVisual(MessageRow row)
+        {
+            return row != null &&
+                (row.Kind == MessageRowKind.Video ||
+                 row.Kind == MessageRowKind.VideoNote ||
+                 row.Kind == MessageRowKind.Animation);
+        }
+
+        private bool OpenInMediaViewer(string path)
+        {
+            if (string.IsNullOrEmpty(path) || Frame == null) return false;
+            try
+            {
+                return Frame.Navigate(typeof(Media.MediaViewerPage), path);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static async Task<bool> LaunchLocalFileAsync(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            try
+            {
+                StorageFile file = await StorageFile.GetFileFromPathAsync(path);
+                if (file == null) return false;
+                return await Launcher.LaunchFileAsync(file);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void OnMessagesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)

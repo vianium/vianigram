@@ -137,6 +137,18 @@ namespace Vianigram.Composition.Infrastructure
             return Result<byte[], Vianigram.Media.Domain.MediaError>.Fail(MapToMediaError(outcome));
         }
 
+        async Task<Result<byte[], Vianigram.Media.Domain.MediaError>>
+            Vianigram.Media.Ports.Outbound.IMtProtoRpcPort.CallAsync(
+                byte[] tlRequest, int dcId, CancellationToken ct)
+        {
+            CallOutcome outcome = await CallMediaInternalAsync(tlRequest, dcId, ct).ConfigureAwait(false);
+            if (outcome.Ok)
+            {
+                return Result<byte[], Vianigram.Media.Domain.MediaError>.Ok(outcome.Bytes);
+            }
+            return Result<byte[], Vianigram.Media.Domain.MediaError>.Fail(MapToMediaError(outcome));
+        }
+
         // Zero-copy media-chunk overload. Routes through the native
         // CallBufferAsync(IBuffer) so 1 MiB chunks no longer pay an
         // 8 MiB-per-round-trip Array<uint8>↔byte[] marshal. Error mapping
@@ -147,6 +159,18 @@ namespace Vianigram.Composition.Infrastructure
                 IBuffer requestBuffer, CancellationToken ct)
         {
             CallOutcome outcome = await CallInternalBufferAsync(requestBuffer, ct).ConfigureAwait(false);
+            if (outcome.Ok)
+            {
+                return Result<IBuffer, Vianigram.Media.Domain.MediaError>.Ok(outcome.ResultBufferOpt);
+            }
+            return Result<IBuffer, Vianigram.Media.Domain.MediaError>.Fail(MapToMediaError(outcome));
+        }
+
+        async Task<Result<IBuffer, Vianigram.Media.Domain.MediaError>>
+            Vianigram.Media.Ports.Outbound.IMtProtoRpcPort.CallBufferAsync(
+                IBuffer requestBuffer, int dcId, CancellationToken ct)
+        {
+            CallOutcome outcome = await CallMediaInternalBufferAsync(requestBuffer, dcId, ct).ConfigureAwait(false);
             if (outcome.Ok)
             {
                 return Result<IBuffer, Vianigram.Media.Domain.MediaError>.Ok(outcome.ResultBufferOpt);

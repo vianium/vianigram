@@ -25,6 +25,7 @@ using Vianigram.Chats.Domain;
 using Vianigram.Chats.Domain.ValueObjects;
 using Vianigram.Chats.Ports.Inbound;
 using Vianigram.Kernel.Events;
+using Vianigram.Kernel.Logging;
 using Vianigram.Kernel.Result;
 using Vianigram.Messages.Domain.Events;
 using Windows.UI.Xaml;
@@ -72,6 +73,13 @@ namespace Vianigram.App.ViewModels
         // appears in every applicable tab collection so a single
         // PropertyChanged update is reflected everywhere.
         private readonly List<DialogRow> _allDialogs = new List<DialogRow>();
+        // Parallel list of the underlying domain previews — kept in
+        // lockstep with _allDialogs so the snapshot writer can persist a
+        // self-describing page on every successful network append. We
+        // can't rebuild a DialogPreview from a DialogRow without losing
+        // peer access_hash, unread count, and pin/mute metadata, so we
+        // remember the source projections explicitly.
+        private readonly List<DialogPreview> _allPreviews = new List<DialogPreview>();
 
         // Subscriptions held so we can drop them on Unsubscribe without
         // leaking handlers across page
@@ -104,6 +112,18 @@ namespace Vianigram.App.ViewModels
         private DialogCursor _nextCursor = DialogCursor.Empty;
         private bool _hasMore = true;
         private int _loadMoreInFlight; // Interlocked guard to prevent overlapping fetches
+
+        // Disk-backed snapshot of the last-rendered dialog list so cold
+        // boot paints instantly from cache while the live RPC is still
+        // in flight. Lazily resolved — the field stays null when storage
+        // is not wired (designer / tests).
+        private readonly Vianigram.App.Services.DialogListSnapshotStore _snapshotStore =
+            new Vianigram.App.Services.DialogListSnapshotStore();
+        // Snapshot persistence is throttled — we only re-write the file
+        // when network responses bring meaningful changes. Bumped on
+        // every successful LoadAsync / LoadMoreAsync that touched the
+        // visible rows.
+        private bool _snapshotDirty;
 
         public ChatListPageViewModel(IChatsApi chats)
             : this(chats, bus: null)
@@ -453,22 +473,213 @@ namespace Vianigram.App.ViewModels
 
         private void OnDialogChanged(object sender, DialogChangedEventArgs args)
         {
-            // Skip the `ListSynced` echo of our own LoadAsync.
-            if (args != null && args.Reason == DialogChangedEventArgs.ChangeReason.ListSynced)
-            {
-                return;
-            }
+            if (args == null) return;
 
-            // Coalesce bursts of DialogChanged into a single LoadAsync
-            // after a 250 ms quiet
-            // window. A sync sweep can fire 5-10 of these for the same
-            // peer (pinned + last-message + unread count + folder), and
-            // doing one refetch per event hammers messages.getDialogs.
-            // Marshal to UI thread to safely manipulate the
-            // DispatcherTimer (which must be created/started/stopped
-            // from the UI thread on WP 8.1).
-            _dialogChangedRefreshPending = true;
-            var ignore = Dispatch.OnUiAsync(EnsureDialogChangedDebounceTimer);
+            // ListSynced is just the echo of our own LoadAsync — ignore.
+            if (args.Reason == DialogChangedEventArgs.ChangeReason.ListSynced) return;
+
+            string peerKey = args.Peer != null ? args.Peer.ToString() : null;
+
+            switch (args.Reason)
+            {
+                case DialogChangedEventArgs.ChangeReason.Removed:
+                    HandleDialogRemoved(peerKey);
+                    return;
+
+                case DialogChangedEventArgs.ChangeReason.Updated:
+                    // Granular row mutation. The vast majority of
+                    // Updated events are covered by the dedicated bus
+                    // subscribers (OnLiveMessageReceived bumps the row
+                    // for LastMessage, OnLiveMessageReadByMe handles
+                    // UnreadCount). For the rare facets we don't have
+                    // a dedicated subscriber for (Title / Photo / Pin /
+                    // Mute / Archive) we hydrate from the shared peer
+                    // cache in place — no Clear() + rebuild of the
+                    // visible collections.
+                    HandleDialogUpdated(peerKey, args.FacetChanged);
+                    return;
+
+                case DialogChangedEventArgs.ChangeReason.Added:
+                    // Brand-new peer entering the catalog. If we already
+                    // have a row for it (the bus subscribers bumped it
+                    // in before this event landed) there's nothing to
+                    // do. Otherwise we still need a small coalesced
+                    // refresh because the new dialog's metadata isn't
+                    // in our in-memory page cache.
+                    if (string.IsNullOrEmpty(peerKey)) return;
+                    if (FindRow(peerKey) != null) return;
+                    _dialogChangedRefreshPending = true;
+                    var ignore = Dispatch.OnUiAsync(EnsureDialogChangedDebounceTimer);
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Drop the row matching <paramref name="peerKey"/> from every
+        /// projection in place — no Clear/rebuild, no flicker. Caller-safe
+        /// from any thread (marshals to the UI dispatcher).
+        /// </summary>
+        private void HandleDialogRemoved(string peerKey)
+        {
+            if (string.IsNullOrEmpty(peerKey)) return;
+
+            var ignore = Dispatch.OnUiAsync(() =>
+            {
+                DialogRow row = FindRow(peerKey);
+                if (row == null) return;
+
+                _allDialogs.Remove(row);
+                // Drop the parallel preview entry as well so the snapshot
+                // writer doesn't re-persist a removed dialog.
+                for (int i = _allPreviews.Count - 1; i >= 0; i--)
+                {
+                    DialogPreview p = _allPreviews[i];
+                    if (p == null || p.Peer == null) continue;
+                    if (string.Equals(p.Peer.ToString(), peerKey, StringComparison.Ordinal))
+                    {
+                        _allPreviews.RemoveAt(i);
+                        break;
+                    }
+                }
+                DialogsAll.Remove(row);
+                DialogsUnread.Remove(row);
+                DialogsPersonal.Remove(row);
+                DialogsGroups.Remove(row);
+                RecomputeCounts();
+
+                // Schedule a snapshot rewrite so the next cold boot
+                // reflects the deletion. Cheap — only runs when a
+                // visible row actually disappeared.
+                SchedulePersistSnapshotFromVisibleRows(AppLog.For("App.ChatListPage"));
+            });
+        }
+
+        /// <summary>
+        /// Refresh one facet of a single visible row using the freshest
+        /// data we have access to (peer cache for Title / LastMessage,
+        /// the existing row for Photo since the avatar fetcher already
+        /// reacts to peer photo updates on its own). Keeps the row's
+        /// position stable — only OnLiveMessageReceived's move-to-top
+        /// is allowed to reorder the list.
+        /// </summary>
+        private void HandleDialogUpdated(string peerKey, Vianigram.Chats.Domain.Events.ChangeKind? facet)
+        {
+            if (string.IsNullOrEmpty(peerKey)) return;
+
+            var ignore = Dispatch.OnUiAsync(() =>
+            {
+                DialogRow row = FindRow(peerKey);
+                if (row == null) return;
+
+                Vianigram.Composition.Infrastructure.IPeerCache peerCache = null;
+                if (App.Composition != null)
+                {
+                    App.Composition.TryResolve<Vianigram.Composition.Infrastructure.IPeerCache>(out peerCache);
+                }
+
+                if (!facet.HasValue)
+                {
+                    // No specific facet → re-hydrate the title from cache
+                    // as a defensive default. Other fields are touched by
+                    // their dedicated bus handlers.
+                    if (peerCache != null) RefreshTitleFromCache(row, peerCache);
+                    RecomputeCounts();
+                    return;
+                }
+
+                switch (facet.Value)
+                {
+                    case Vianigram.Chats.Domain.Events.ChangeKind.Title:
+                        if (peerCache != null) RefreshTitleFromCache(row, peerCache);
+                        break;
+
+                    case Vianigram.Chats.Domain.Events.ChangeKind.LastMessage:
+                        // Already covered by OnLiveMessageReceived — that
+                        // handler mutates the row in place AND moves it
+                        // to the top of the list. Nothing to do here.
+                        break;
+
+                    case Vianigram.Chats.Domain.Events.ChangeKind.UnreadCount:
+                        // Most cases land on OnLiveMessageReceived /
+                        // OnLiveMessageReadByMe. For the residual cases
+                        // (cross-device read sync) we accept the row's
+                        // existing value — Telegram will catch us up on
+                        // the next ListSynced.
+                        break;
+
+                    case Vianigram.Chats.Domain.Events.ChangeKind.Photo:
+                        // Force the avatar layer to re-evaluate.
+                        row.RefreshAvatar();
+                        break;
+
+                    case Vianigram.Chats.Domain.Events.ChangeKind.Pinned:
+                    case Vianigram.Chats.Domain.Events.ChangeKind.Muted:
+                    case Vianigram.Chats.Domain.Events.ChangeKind.Archived:
+                        // These facets need an authoritative re-read,
+                        // but we deliberately don't trigger a full
+                        // LoadAsync here. The next ListSynced from a
+                        // user-initiated pull-to-refresh repaints the
+                        // visible state without flicker.
+                        break;
+                }
+
+                RecomputeCounts();
+            });
+        }
+
+        /// <summary>Refresh the row title from <paramref name="peerCache"/> if a fresher value exists.</summary>
+        private static void RefreshTitleFromCache(
+            DialogRow row,
+            Vianigram.Composition.Infrastructure.IPeerCache peerCache)
+        {
+            if (row == null || peerCache == null) return;
+            // RefreshAvatar is a no-op when the title text didn't
+            // actually change — assigning the same string short-circuits
+            // SetProperty in DialogRow.
+            string maybeFresh = TryResolveTitleFromCacheStatic(peerCache, row);
+            if (!string.IsNullOrEmpty(maybeFresh) && !string.Equals(maybeFresh, row.Title, StringComparison.Ordinal))
+            {
+                row.Title = maybeFresh;
+                row.RefreshAvatar();
+            }
+        }
+
+        /// <summary>
+        /// Static peer-cache title lookup mirroring
+        /// <see cref="ResolveTitleFromCache"/> but addressed by row data
+        /// rather than a DialogPreview (we don't keep the preview around
+        /// after ApplyPage runs).
+        /// </summary>
+        private static string TryResolveTitleFromCacheStatic(
+            Vianigram.Composition.Infrastructure.IPeerCache peerCache,
+            DialogRow row)
+        {
+            if (peerCache == null || row == null) return null;
+            // DialogRow exposes the peer kind + id via PeerKey
+            // (e.g. "user:123"); recover them by parsing the prefix.
+            string peerKey = row.PeerKey;
+            if (string.IsNullOrEmpty(peerKey)) return null;
+            int sep = peerKey.IndexOf(':');
+            if (sep <= 0 || sep >= peerKey.Length - 1) return null;
+            string kind = peerKey.Substring(0, sep);
+            long id;
+            if (!long.TryParse(peerKey.Substring(sep + 1), System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out id)) return null;
+
+            string title = null;
+            if (string.Equals(kind, "user", StringComparison.OrdinalIgnoreCase))
+            {
+                title = peerCache.GetUserDisplayName(id);
+            }
+            else if (string.Equals(kind, "channel", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(kind, "chat", StringComparison.OrdinalIgnoreCase))
+            {
+                // The peer cache stores chat and channel titles in the
+                // same dictionary keyed by id — IPeerCache exposes one
+                // GetChatTitle(long) entry point for both shapes.
+                title = peerCache.GetChatTitle(id);
+            }
+            return string.IsNullOrEmpty(title) ? null : title;
         }
 
         private void EnsureDialogChangedDebounceTimer()
@@ -820,8 +1031,33 @@ namespace Vianigram.App.ViewModels
                 return;
             }
 
+            // Cache-first paint: hydrate the visible rows from the
+            // last-known snapshot BEFORE awaiting the network. This is
+            // the whole reason the snapshot exists — first paint goes
+            // from blank to "real-looking list" in ~30 ms of disk I/O
+            // instead of waiting for messages.getDialogs + DC reopen +
+            // (sometimes) DH handshake. We only consult the snapshot
+            // when the visible set is still empty so a user-initiated
+            // refresh doesn't get clobbered.
+            bool paintedFromSnapshot = false;
+            if (_allDialogs.Count == 0)
+            {
+                // Hydrate off-UI; HydrateFromSnapshotAsync handles its
+                // own dispatch for the XAML-binding mutation step. The
+                // continuation here lands back on the UI thread for the
+                // rest of LoadAsync's state-mutating bookkeeping.
+                paintedFromSnapshot = await HydrateFromSnapshotAsync(log, ct).ConfigureAwait(true);
+            }
+
             IsRefreshing = true;
-            StatusText = "syncing";
+            // While there's content on screen the spinner stays implicit
+            // — flipping StatusText to "syncing" would visually
+            // overwrite the cached chat names with a status string. Only
+            // show the syncing tag if we couldn't paint anything yet.
+            if (!paintedFromSnapshot && _allDialogs.Count == 0)
+            {
+                StatusText = "syncing";
+            }
             // Reset pagination — LoadAsync replaces the visible set.
             _nextCursor = DialogCursor.Empty;
             HasMore = true;
@@ -846,8 +1082,18 @@ namespace Vianigram.App.ViewModels
                 {
                     sw.Stop();
                     log.Error("GetDialogsAsync threw elapsed=" + sw.ElapsedMilliseconds + "ms " + ex);
-                    ErrorMessage = "Unexpected error: " + ex.GetType().Name + ".";
-                    StatusText = "error";
+                    // Network died but we have a cached list visible —
+                    // tell the user the freshen failed without wiping
+                    // their rows.
+                    if (paintedFromSnapshot && _allDialogs.Count > 0)
+                    {
+                        StatusText = "offline";
+                    }
+                    else
+                    {
+                        ErrorMessage = "Unexpected error: " + ex.GetType().Name + ".";
+                        StatusText = "error";
+                    }
                     return;
                 }
 
@@ -855,8 +1101,15 @@ namespace Vianigram.App.ViewModels
                 {
                     string detail = result.Error == null ? "(null error)" : result.Error.ToString();
                     log.Warn("GetDialogsAsync failed: " + detail);
-                    ErrorMessage = FormatError(result.Error);
-                    StatusText = "error";
+                    if (paintedFromSnapshot && _allDialogs.Count > 0)
+                    {
+                        StatusText = "offline";
+                    }
+                    else
+                    {
+                        ErrorMessage = FormatError(result.Error);
+                        StatusText = "error";
+                    }
                     return;
                 }
 
@@ -867,6 +1120,10 @@ namespace Vianigram.App.ViewModels
                 {
                     _nextCursor = result.Value.NextCursor ?? DialogCursor.Empty;
                     HasMore = result.Value.HasMore;
+                    // Persist the fresh page to disk so the next cold
+                    // boot can paint it immediately. Fire-and-forget —
+                    // a save failure can't affect the on-screen list.
+                    SchedulePersistSnapshot(result.Value, log);
                 }
                 log.Info("LoadAsync done items=" + _allDialogs.Count +
                     " hasMore=" + HasMore +
@@ -877,6 +1134,137 @@ namespace Vianigram.App.ViewModels
             {
                 IsRefreshing = false;
             }
+        }
+
+        /// <summary>
+        /// Reads the disk-cached snapshot and paints it into the visible
+        /// collections. Returns true on a successful paint (caller can
+        /// then keep StatusText cosmetic and skip the "syncing" tag).
+        /// All failures fall through silently — the live RPC path is
+        /// authoritative.
+        /// </summary>
+        private async Task<bool> HydrateFromSnapshotAsync(IComponentLogger log, CancellationToken ct)
+        {
+            try
+            {
+                // The disk read (~30 ms) must NOT block the UI thread.
+                // Earlier this used ConfigureAwait(true) and the
+                // continuation waited for the dispatcher — during the
+                // cold-boot window the dispatcher is busy rendering
+                // XAML and running composition, pushing the snapshot
+                // landing to ~700 ms. Two halves: do the I/O off-UI,
+                // then marshal the ObservableCollection mutations back.
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                Vianigram.App.Services.DialogSnapshot snapshot =
+                    await _snapshotStore.LoadAsync(ct).ConfigureAwait(false);
+                sw.Stop();
+                long diskMs = sw.ElapsedMilliseconds;
+                if (snapshot == null || snapshot.Items == null || snapshot.Items.Count == 0)
+                {
+                    log.Info("LoadAsync snapshot=miss elapsed=" + diskMs + "ms");
+                    return false;
+                }
+
+                // ApplyPage mutates ObservableCollections bound to XAML
+                // — must run on the UI thread. The page object is built
+                // off-UI from the immutable snapshot.
+                var page = new DialogPage(snapshot.Items, snapshot.Cursor, snapshot.HasMore);
+                int paintedCount = 0;
+                var paintSw = System.Diagnostics.Stopwatch.StartNew();
+                await Dispatch.OnUiAsync(() =>
+                {
+                    ApplyPage(page);
+                    _nextCursor = snapshot.Cursor ?? DialogCursor.Empty;
+                    HasMore = snapshot.HasMore;
+                    paintedCount = _allDialogs.Count;
+                    StatusText = (paintedCount == 0) ? "syncing" : "ok";
+                }).ConfigureAwait(false);
+                paintSw.Stop();
+
+                log.Info("LoadAsync snapshot=hit items=" + snapshot.Items.Count +
+                    " savedAt=" + (snapshot.SavedAtUtc == default(DateTime)
+                        ? "(unknown)"
+                        : snapshot.SavedAtUtc.ToString("o", System.Globalization.CultureInfo.InvariantCulture)) +
+                    " diskMs=" + diskMs + " paintMs=" + paintSw.ElapsedMilliseconds);
+                return paintedCount > 0;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                log.Warn("LoadAsync snapshot hydration threw: " + ex.GetType().Name + ": " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Fire-and-forget snapshot writer. Captures the previews list
+        /// at call time and persists them off-thread so the UI update
+        /// completes immediately. Failures are logged and absorbed.
+        /// </summary>
+        private void SchedulePersistSnapshot(DialogPage page, IComponentLogger log)
+        {
+            if (page == null || page.Items == null || page.Items.Count == 0) return;
+
+            // Copy into a stable list — DialogPage.Items could be mutated
+            // by a follow-up RPC or LoadMore path before the background
+            // task runs.
+            var copy = new System.Collections.Generic.List<DialogPreview>(page.Items.Count);
+            for (int i = 0; i < page.Items.Count; i++)
+            {
+                if (page.Items[i] != null) copy.Add(page.Items[i]);
+            }
+            DialogCursor cursor = page.NextCursor ?? DialogCursor.Empty;
+            bool hasMore = page.HasMore;
+
+            Task.Run(async delegate
+            {
+                try
+                {
+                    await _snapshotStore.SaveAsync(copy, cursor, hasMore, CancellationToken.None)
+                        .ConfigureAwait(false);
+                    _snapshotDirty = false;
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("snapshot persist threw: " + ex.GetType().Name + ": " + ex.Message);
+                }
+            });
+        }
+
+        /// <summary>
+        /// Variant used by LoadMoreAsync — captures the entire visible
+        /// preview set (first page + every appended LoadMore result) so
+        /// the next cold boot can paint the same depth the user reached
+        /// in this session. Without this the snapshot would only ever
+        /// remember the first page even after the user scrolled into
+        /// hundreds of dialogs.
+        /// </summary>
+        private void SchedulePersistSnapshotFromVisibleRows(IComponentLogger log)
+        {
+            if (_allPreviews.Count == 0) return;
+
+            var copy = new System.Collections.Generic.List<DialogPreview>(_allPreviews.Count);
+            for (int i = 0; i < _allPreviews.Count; i++)
+            {
+                DialogPreview p = _allPreviews[i];
+                if (p != null) copy.Add(p);
+            }
+            DialogCursor cursor = _nextCursor ?? DialogCursor.Empty;
+            bool hasMore = HasMore;
+
+            Task.Run(async delegate
+            {
+                try
+                {
+                    await _snapshotStore.SaveAsync(copy, cursor, hasMore, CancellationToken.None)
+                        .ConfigureAwait(false);
+                    _snapshotDirty = false;
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("snapshot persist (load-more) threw: " + ex.GetType().Name + ": " + ex.Message);
+                }
+            });
         }
 
         /// <summary>
@@ -959,11 +1347,27 @@ namespace Vianigram.App.ViewModels
                     return;
                 }
 
-                AppendPage(page);
+                int appended = AppendPage(page);
                 _nextCursor = page.NextCursor ?? DialogCursor.Empty;
-                HasMore = page.HasMore;
-                log.Info("LoadMoreAsync appended=" + page.Items.Count +
+                HasMore = page.HasMore && appended > 0;
+                if (page.HasMore && appended == 0)
+                {
+                    log.Info("LoadMoreAsync no new rows from raw=" + page.Items.Count +
+                        "; stopping pagination to avoid repeated pages");
+                }
+                log.Info("LoadMoreAsync appended=" + appended +
+                    " raw=" + page.Items.Count +
                     " total=" + _allDialogs.Count + " hasMore=" + HasMore);
+
+                // Re-snapshot with the full visible set so a future cold
+                // boot paints everything the user actually scrolled to,
+                // not just the first 30 dialogs. Snapshot capacity is
+                // bounded by what the user has paged through this
+                // session — cheap (~500 B/row).
+                if (appended > 0)
+                {
+                    SchedulePersistSnapshotFromVisibleRows(log);
+                }
             }
             finally
             {
@@ -978,9 +1382,9 @@ namespace Vianigram.App.ViewModels
         /// observed (defensive — Telegram's pagination overlap can
         /// repeat the boundary item).
         /// </summary>
-        private void AppendPage(DialogPage page)
+        private int AppendPage(DialogPage page)
         {
-            if (page == null || page.Items == null) return;
+            if (page == null || page.Items == null) return 0;
 
             Vianigram.Composition.Infrastructure.IPeerCache peerCache = null;
             if (App.Composition != null)
@@ -988,6 +1392,7 @@ namespace Vianigram.App.ViewModels
                 App.Composition.TryResolve<Vianigram.Composition.Infrastructure.IPeerCache>(out peerCache);
             }
 
+            int appended = 0;
             for (int i = 0; i < page.Items.Count; i++)
             {
                 var preview = page.Items[i];
@@ -1022,13 +1427,16 @@ namespace Vianigram.App.ViewModels
                 HydrateAvatarFromCache(row, peerCache, preview);
 
                 _allDialogs.Add(row);
+                _allPreviews.Add(preview);
                 DialogsAll.Add(row);
                 if (BelongsToTab(row, DialogTab.Unread)) DialogsUnread.Add(row);
                 if (BelongsToTab(row, DialogTab.Personal)) DialogsPersonal.Add(row);
                 if (BelongsToTab(row, DialogTab.Groups)) DialogsGroups.Add(row);
+                appended++;
             }
 
             RecomputeCounts();
+            return appended;
         }
 
         /// <summary>
@@ -1036,10 +1444,13 @@ namespace Vianigram.App.ViewModels
         ///   Stage 1 (synchronous, ~5 ms): expand the inline stripped
         ///   JPEG so the row paints with a recognisable thumbnail
         ///   immediately — no network round-trip.
-        ///   Stage 2 (async, optional): if the peer has a real photo
-        ///   ref (photo_id + dc_id captured by the slice decoder),
-        ///   issue an HD download via PeerAvatarFetcher. When it
-        ///   completes we swap AvatarBitmap to the sharp version.
+        ///   Stage 2 (deferred): if the peer has a real photo ref
+        ///   (photo_id + dc_id captured by the slice decoder), record
+        ///   the params on the row so <see cref="DialogRow.RequestAvatar"/>
+        ///   can issue the HD download lazily when the row is realised
+        ///   into the ListView viewport. We deliberately do NOT fire
+        ///   the fetch from here: the cold-start fan-out would burn
+        ///   ~5 s of wall time on rows the user may never scroll to.
         /// </summary>
         private static void HydrateAvatarFromCache(
             DialogRow row,
@@ -1062,28 +1473,27 @@ namespace Vianigram.App.ViewModels
                 // Cache lookup is best-effort.
             }
 
-            // Stage 1: stripped thumb → BitmapImage.
+            // Stage 1: stripped thumb → BitmapImage. Always fires
+            // (no network involved) so every row paints a face-shape
+            // gradient under the initials placeholder.
             if (stripped != null && stripped.Length >= 3)
             {
                 var ignore = ExpandAndAssignAsync(row, stripped);
                 GC.KeepAlive(ignore);
             }
 
-            // Stage 2: HD avatar via upload.getFile. Best-effort —
-            // failures keep the stripped thumb visible.
+            // Stage 2: capture HD avatar params for later. Lazy-fetch
+            // is triggered by the ListView's ContainerContentChanging
+            // hook when a row materialises.
             long photoId; int photoDcId;
             bool havePhotoRef = isUser
                 ? peerCache.TryGetUserPhotoRef(peerIdLocal, out photoId, out photoDcId)
                 : peerCache.TryGetChatPhotoRef(peerIdLocal, out photoId, out photoDcId);
             if (!havePhotoRef || photoId == 0L || photoDcId <= 0) return;
 
-            Vianigram.App.Services.PeerAvatarFetcher fetcher = ResolveAvatarFetcher();
-            if (fetcher == null) return;
-
-            // Map PeerKind → PeerPhotoKind. The peer's access_hash is
-            // needed for inputPeerUser / inputPeerChannel — pull it
-            // from the cache the same way ChatPage does for opening
-            // a conversation.
+            // Map PeerKind -> PeerPhotoKind. The peer's access_hash is
+            // needed for inputPeerUser / inputPeerChannel; basic chats
+            // use inputPeerChat with no hash.
             Vianigram.Media.Domain.ValueObjects.PeerPhotoKind ppKind;
             long peerAccessHash = 0L;
             if (isUser)
@@ -1100,17 +1510,10 @@ namespace Vianigram.App.ViewModels
             }
             else
             {
-                // Basic chat — no access_hash needed for inputPeerChat.
                 ppKind = Vianigram.Media.Domain.ValueObjects.PeerPhotoKind.Chat;
             }
 
-            DialogRow rowRef = row;
-            int dcId = photoDcId;
-            long pid = photoId;
-            long ah2 = peerAccessHash;
-            long pidPeer = peerIdLocal;
-            var fetchTask = FetchAndAssignHdAsync(fetcher, ppKind, pidPeer, ah2, dcId, pid, rowRef);
-            GC.KeepAlive(fetchTask);
+            row.SetAvatarFetchParams(ppKind, peerIdLocal, peerAccessHash, photoDcId, photoId);
         }
 
         private static async Task ExpandAndAssignAsync(DialogRow row, byte[] stripped)
@@ -1134,36 +1537,13 @@ namespace Vianigram.App.ViewModels
             }
         }
 
-        private static async Task FetchAndAssignHdAsync(
-            Vianigram.App.Services.PeerAvatarFetcher fetcher,
-            Vianigram.Media.Domain.ValueObjects.PeerPhotoKind kind,
-            long peerId, long accessHash, int dcId, long photoId,
-            DialogRow row)
-        {
-            try
-            {
-                using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(30)))
-                {
-                    var bmp = await fetcher.FetchSmallAsync(
-                        kind, peerId, accessHash, dcId, photoId, cts.Token).ConfigureAwait(true);
-                    if (bmp != null && row != null) row.AvatarBitmap = bmp;
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLog.For("App.ChatListPage").Info(
-                    "avatar.hd skipped peer=" + kind + ":" + peerId +
-                    " err=" + ex.GetType().Name);
-            }
-        }
-
         // Memoised fetcher resolved on first call — composition root
         // creates lazy IMediaApi, IMediaCache; we wire them once and
         // reuse for every row in the dialog list.
         private static Vianigram.App.Services.PeerAvatarFetcher _avatarFetcher;
         private static readonly object _avatarFetcherGate = new object();
 
-        private static Vianigram.App.Services.PeerAvatarFetcher ResolveAvatarFetcher()
+        internal static Vianigram.App.Services.PeerAvatarFetcher ResolveAvatarFetcher()
         {
             if (_avatarFetcher != null) return _avatarFetcher;
             lock (_avatarFetcherGate)
@@ -1174,8 +1554,13 @@ namespace Vianigram.App.ViewModels
                 Vianigram.Media.Ports.Outbound.IMediaCache cache;
                 if (!App.Composition.TryResolve<Vianigram.Media.Ports.Inbound.IMediaApi>(out media) || media == null) return null;
                 if (!App.Composition.TryResolve<Vianigram.Media.Ports.Outbound.IMediaCache>(out cache) || cache == null) return null;
+                // Optional persistent JPEG cache — null in JSON-fallback
+                // storage mode. The fetcher tolerates null and degrades
+                // to the previous network-only path.
+                Vianigram.Storage.Ports.Stubs.IAvatarCacheStore diskCache = null;
+                App.Composition.TryResolve<Vianigram.Storage.Ports.Stubs.IAvatarCacheStore>(out diskCache);
                 var log = AppLog.For("App.AvatarFetcher");
-                _avatarFetcher = new Vianigram.App.Services.PeerAvatarFetcher(media, cache, log);
+                _avatarFetcher = new Vianigram.App.Services.PeerAvatarFetcher(media, cache, log, diskCache);
                 return _avatarFetcher;
             }
         }
@@ -1183,6 +1568,7 @@ namespace Vianigram.App.ViewModels
         private void ApplyPage(DialogPage page)
         {
             _allDialogs.Clear();
+            _allPreviews.Clear();
             DialogsAll.Clear();
             DialogsUnread.Clear();
             DialogsPersonal.Clear();
@@ -1248,6 +1634,7 @@ namespace Vianigram.App.ViewModels
                     HydrateAvatarFromCache(row, peerCache, preview);
 
                     _allDialogs.Add(row);
+                    _allPreviews.Add(preview);
                     // Append into every applicable tab projection. Order
                     // matches _allDialogs (preserved by appending sequentially).
                     DialogsAll.Add(row);
@@ -1347,6 +1734,21 @@ namespace Vianigram.App.ViewModels
         private DateTime _typingExpiresUtc;
         private bool _isPinned;
         private bool _isMuted;
+
+        // Deferred-HD-fetch parameters captured at row construction time
+        // from IPeerCache. The fetch itself is not issued until the row
+        // is realised into the viewport — see RequestAvatar() below. This
+        // turns the cold-start fan-out from "16 parallel upload.getFile
+        // RPCs even for rows that never paint" into "fetch only what the
+        // user actually sees". On a Lumia the first viewport shows ~6
+        // dialogs; the remaining 25-30 rows wait for a scroll.
+        private Vianigram.Media.Domain.ValueObjects.PeerPhotoKind _avatarPeerKind;
+        private long _avatarPeerId;
+        private long _avatarPeerAccessHash;
+        private int _avatarDcId;
+        private long _avatarPhotoId;
+        private bool _avatarHasRef;
+        private bool _avatarRequested;
 
         public string PeerKey
         {
@@ -1600,6 +2002,97 @@ namespace Vianigram.App.ViewModels
         {
             Initials = CreateInitials(Title);
             AvatarColorSeed = CreateColorSeed(PeerKey, Title);
+        }
+
+        /// <summary>
+        /// Tracks whether <see cref="RequestAvatar"/> has fired for this
+        /// row. Surfaced read-only so callers (or tests) can verify the
+        /// lazy-fetch contract without poking internal state.
+        /// </summary>
+        public bool AvatarRequested { get { return _avatarRequested; } }
+
+        /// <summary>
+        /// Capture the deferred HD-fetch parameters resolved from the
+        /// peer cache at row-construction time. Called once per row by
+        /// the VM during the dialog page hydration. The actual network
+        /// fetch is gated by <see cref="RequestAvatar"/>.
+        /// </summary>
+        internal void SetAvatarFetchParams(
+            Vianigram.Media.Domain.ValueObjects.PeerPhotoKind kind,
+            long peerId,
+            long peerAccessHash,
+            int dcId,
+            long photoId)
+        {
+            _avatarPeerKind = kind;
+            _avatarPeerId = peerId;
+            _avatarPeerAccessHash = peerAccessHash;
+            _avatarDcId = dcId;
+            _avatarPhotoId = photoId;
+            _avatarHasRef = photoId != 0L && dcId > 0;
+        }
+
+        /// <summary>
+        /// Idempotent: triggers the HD avatar fetch the first time it's
+        /// called and is a no-op thereafter. Wired from the ChatListPage
+        /// ListView's ContainerContentChanging event so only rows
+        /// realised into the visual tree consume an upload.getFile RPC.
+        /// </summary>
+        public void RequestAvatar()
+        {
+            if (_avatarRequested) return;
+            _avatarRequested = true;
+            if (!_avatarHasRef) return;
+
+            // The fetcher is App-layer; capture locals so the closure
+            // doesn't pin a reference to this row beyond its lifetime.
+            var fetcher = ResolveAvatarFetcherForRow();
+            if (fetcher == null) return;
+
+            var kind = _avatarPeerKind;
+            long pid = _avatarPeerId;
+            long ah = _avatarPeerAccessHash;
+            int dc = _avatarDcId;
+            long photoId = _avatarPhotoId;
+            DialogRow rowRef = this;
+            var fetchTask = FetchAndAssignHdAsync(fetcher, kind, pid, ah, dc, photoId, rowRef);
+            GC.KeepAlive(fetchTask);
+        }
+
+        // The fetcher resolver lives on the outer VM type (it needs
+        // App.Composition); this wrapper exists only because DialogRow
+        // is a public sibling type rather than nested. Implementation
+        // delegates to the same memoised instance.
+        private static Vianigram.App.Services.PeerAvatarFetcher ResolveAvatarFetcherForRow()
+        {
+            return ChatListPageViewModel.ResolveAvatarFetcher();
+        }
+
+        // Same signature as the VM's private helper; duplicated here so
+        // DialogRow.RequestAvatar can issue the await without going back
+        // through the outer class. Keeps the lazy-fetch path on a single
+        // hot path with no additional indirection.
+        private static async Task FetchAndAssignHdAsync(
+            Vianigram.App.Services.PeerAvatarFetcher fetcher,
+            Vianigram.Media.Domain.ValueObjects.PeerPhotoKind kind,
+            long peerId, long accessHash, int dcId, long photoId,
+            DialogRow row)
+        {
+            try
+            {
+                using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                {
+                    var bmp = await fetcher.FetchSmallAsync(
+                        kind, peerId, accessHash, dcId, photoId, cts.Token).ConfigureAwait(true);
+                    if (bmp != null && row != null) row.AvatarBitmap = bmp;
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLog.For("App.ChatListPage").Info(
+                    "avatar.hd lazy-skipped peer=" + kind + ":" + peerId +
+                    " err=" + ex.GetType().Name);
+            }
         }
 
         private static string FormatTypingAction(string action)

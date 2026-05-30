@@ -6,6 +6,7 @@ using Windows.UI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media;
+using Windows.UI.Xaml.Media.Animation;
 using Windows.UI.Xaml.Media.Imaging;
 
 namespace Vianigram.App.Controls
@@ -117,6 +118,11 @@ namespace Vianigram.App.Controls
             Host.Height = s;
             BackgroundEllipse.Width = s;
             BackgroundEllipse.Height = s;
+            if (ImageEllipse != null)
+            {
+                ImageEllipse.Width = s;
+                ImageEllipse.Height = s;
+            }
             if (InitialsText != null)
             {
                 InitialsText.FontSize = s * 0.38;
@@ -127,22 +133,38 @@ namespace Vianigram.App.Controls
         {
             if (BackgroundEllipse == null || InitialsText == null) return;
 
-            if (TryApplyImage())
-            {
-                InitialsText.Visibility = Visibility.Collapsed;
-                return;
-            }
-
+            // Placeholder always renders — colour + initials. The real
+            // avatar paints on top in the foreground tier and fades in
+            // when it arrives, so we never see a blank-circle flash
+            // between the row appearing and the bitmap landing.
             BackgroundEllipse.Fill = BackgroundColor != null ? BackgroundColor : DeriveBackground();
             InitialsText.Text = Initials ?? string.Empty;
             InitialsText.Visibility = Visibility.Visible;
+
+            if (TryApplyImage())
+            {
+                BeginFadeIn();
+            }
+            else
+            {
+                // No image (yet); make sure the foreground tier is
+                // invisible so the placeholder remains pristine.
+                if (ImageEllipse != null)
+                {
+                    ImageEllipse.Fill = null;
+                    ImageEllipse.Opacity = 0.0;
+                }
+            }
         }
 
         private bool TryApplyImage()
         {
+            if (ImageEllipse == null) return false;
+
             // Prefer the directly-supplied BitmapImage (e.g. an expanded
-            // stripped thumb) over the URL-style ImageSource so we can
-            // fill the avatar without an http fetch.
+            // stripped thumb or the HD JPEG fetched by PeerAvatarFetcher)
+            // over the URL-style ImageSource so we can fill the avatar
+            // without a network round-trip.
             ImageSource directImg = Image;
             if (directImg != null)
             {
@@ -155,7 +177,7 @@ namespace Vianigram.App.Controls
                         AlignmentX = AlignmentX.Center,
                         AlignmentY = AlignmentY.Center
                     };
-                    BackgroundEllipse.Fill = brush;
+                    ImageEllipse.Fill = brush;
                     return true;
                 }
                 catch
@@ -182,7 +204,7 @@ namespace Vianigram.App.Controls
                     AlignmentX = AlignmentX.Center,
                     AlignmentY = AlignmentY.Center
                 };
-                BackgroundEllipse.Fill = brush;
+                ImageEllipse.Fill = brush;
                 return true;
             }
             catch
@@ -190,6 +212,49 @@ namespace Vianigram.App.Controls
                 return false;
             }
         }
+
+        private void BeginFadeIn()
+        {
+            if (ImageEllipse == null) return;
+
+            // 200 ms opacity ramp 0 -> 1. Storyboard runs on the
+            // composition thread (independent animation) so it costs
+            // nothing on the UI thread once kicked off. Cancelling any
+            // in-flight storyboard prevents stutter when the row is
+            // rebound during scroll recycling.
+            try
+            {
+                if (_fadeInStoryboard != null)
+                {
+                    try { _fadeInStoryboard.Stop(); } catch { }
+                }
+                ImageEllipse.Opacity = 0.0;
+                var sb = new Storyboard();
+                var anim = new DoubleAnimation
+                {
+                    From = 0.0,
+                    To = 1.0,
+                    Duration = new Duration(TimeSpan.FromMilliseconds(200))
+                };
+                Storyboard.SetTarget(anim, ImageEllipse);
+                Storyboard.SetTargetProperty(anim, "Opacity");
+                sb.Children.Add(anim);
+                _fadeInStoryboard = sb;
+                sb.Begin();
+            }
+            catch
+            {
+                // Storyboard plumbing is best-effort; if it fails we
+                // just snap to full opacity rather than leaving the
+                // avatar invisible.
+                ImageEllipse.Opacity = 1.0;
+            }
+        }
+
+        // Tracks the most recent fade-in so a fast successive image
+        // assignment (stripped thumb -> HD JPEG) doesn't blend two
+        // overlapping storyboards.
+        private Storyboard _fadeInStoryboard;
 
         private SolidColorBrush DeriveBackground()
         {

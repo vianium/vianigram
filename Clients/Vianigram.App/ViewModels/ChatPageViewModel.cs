@@ -24,6 +24,7 @@ using System.Threading.Tasks;
 using Vianigram.App.Controls.Bubbles;
 using Vianigram.App.Services;
 using Vianigram.Kernel.Result;
+using Vianigram.Media.Domain.ValueObjects;
 using Vianigram.Messages.Domain;
 using Vianigram.Messages.Domain.Entities;
 using Vianigram.Messages.Domain.ValueObjects;
@@ -79,6 +80,20 @@ namespace Vianigram.App.ViewModels
         public long PeerColorSeed
         {
             get { return CreateColorSeed(_peerKey, _peerTitle); }
+        }
+
+        // Avatar bitmap shared with the dialog list. Resolved lazily on
+        // LoadInitialAsync via AvatarResolver, which consults the same
+        // PeerAvatarFetcher (process-local bitmap cache + SQLite disk
+        // cache) the ChatList already populated. A user who scrolled
+        // past this peer in the dialog list will see the chat header
+        // photo paint synchronously instead of dropping to initials.
+        // Nullable — initials remain visible while null.
+        private Windows.UI.Xaml.Media.ImageSource _peerAvatarImage;
+        public Windows.UI.Xaml.Media.ImageSource PeerAvatarImage
+        {
+            get { return _peerAvatarImage; }
+            private set { SetProperty(ref _peerAvatarImage, value); }
         }
 
         // Live-updated status, fed by Sync's RemoteUserStatusChanged /
@@ -574,6 +589,16 @@ namespace Vianigram.App.ViewModels
                 MediaFullPath = src.MediaFullPath,
                 MediaSource = src.MediaSource,
                 MediaPreviewBytes = src.MediaPreviewBytes,
+                MediaLocationKind = src.MediaLocationKind,
+                MediaFileType = src.MediaFileType,
+                MediaRemoteId = src.MediaRemoteId,
+                MediaAccessHash = src.MediaAccessHash,
+                MediaFileReference = src.MediaFileReference,
+                MediaDcId = src.MediaDcId,
+                MediaSizeBytes = src.MediaSizeBytes,
+                MediaMime = src.MediaMime,
+                MediaFileName = src.MediaFileName,
+                MediaThumbSize = src.MediaThumbSize,
                 MediaTypeBadge = src.MediaTypeBadge,
                 IsMediaLoading = src.IsMediaLoading,
                 HasMediaFailed = src.HasMediaFailed,
@@ -591,6 +616,10 @@ namespace Vianigram.App.ViewModels
                 FileSizeBytes = src.FileSizeBytes,
                 FileMime = src.FileMime,
                 FilePath = src.FilePath,
+                FileRemoteId = src.FileRemoteId,
+                FileAccessHash = src.FileAccessHash,
+                FileReference = src.FileReference,
+                FileDcId = src.FileDcId,
                 DownloadedBytes = src.DownloadedBytes,
                 TotalBytes = src.TotalBytes,
                 IsDownloaded = src.IsDownloaded,
@@ -736,7 +765,6 @@ namespace Vianigram.App.ViewModels
             // we play safe and start a fresh run by passing 0.
             EnrichWithAuthor(row, msg, peerCache, isGroup, ref lastFromId);
             Messages.Add(row);
-            MaybeKickPhotoThumbFetch(row, msg);
 
             // A new bubble cancels any pending typing indicator from
             // this peer — they sent the thing they were typing.
@@ -824,10 +852,42 @@ namespace Vianigram.App.ViewModels
                 return;
             }
 
+            // Avatar hydration fires in parallel with the history load.
+            // The fetcher's bitmap cache is keyed by photoId, so the
+            // common case (peer already seen in dialog list) is a
+            // synchronous in-memory lookup and the header paints with
+            // the photo before LoadInitial returns.
+            var avatarIgnore = HydratePeerAvatarAsync(ct);
+
             if (ct.IsCancellationRequested) return;
             await TryApplyCachedPageAsync(ct).ConfigureAwait(true);
             if (ct.IsCancellationRequested) return;
             StartLatestRefresh();
+        }
+
+        /// <summary>
+        /// Resolves the small (160×160) avatar for this chat's peer via
+        /// the shared <see cref="Vianigram.App.Services.AvatarResolver"/>.
+        /// Best-effort: any failure leaves the initials placeholder
+        /// alone.
+        /// </summary>
+        private async Task HydratePeerAvatarAsync(CancellationToken ct)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_peerKey)) return;
+                Windows.UI.Xaml.Media.ImageSource bmp =
+                    await Vianigram.App.Services.AvatarResolver
+                        .TryResolveSmallAsync(_peerKey, ct)
+                        .ConfigureAwait(true);
+                if (bmp != null) PeerAvatarImage = bmp;
+            }
+            catch (OperationCanceledException) { /* navigated away */ }
+            catch (Exception ex)
+            {
+                AppLog.For("App.ChatPage").Warn(
+                    "HydratePeerAvatarAsync threw: " + ex.GetType().Name + ": " + ex.Message);
+            }
         }
 
         public async Task LoadOlderAsync(CancellationToken ct)
@@ -1070,7 +1130,6 @@ namespace Vianigram.App.ViewModels
                 {
                     EnrichWithAuthor(row, m, peerCache, isGroup, ref lastFromId);
                     built.Add(row);
-                    MaybeKickPhotoThumbFetch(row, m);
                 }
             }
 
@@ -1187,6 +1246,16 @@ namespace Vianigram.App.ViewModels
                 && string.Equals(a.MediaFullPath, b.MediaFullPath, StringComparison.Ordinal)
                 && string.Equals(a.MediaSource, b.MediaSource, StringComparison.Ordinal)
                 && SameBytes(a.MediaPreviewBytes, b.MediaPreviewBytes)
+                && a.MediaLocationKind == b.MediaLocationKind
+                && a.MediaFileType == b.MediaFileType
+                && a.MediaRemoteId == b.MediaRemoteId
+                && a.MediaAccessHash == b.MediaAccessHash
+                && SameBytes(a.MediaFileReference, b.MediaFileReference)
+                && a.MediaDcId == b.MediaDcId
+                && a.MediaSizeBytes == b.MediaSizeBytes
+                && string.Equals(a.MediaMime, b.MediaMime, StringComparison.Ordinal)
+                && string.Equals(a.MediaFileName, b.MediaFileName, StringComparison.Ordinal)
+                && string.Equals(a.MediaThumbSize, b.MediaThumbSize, StringComparison.Ordinal)
                 && string.Equals(a.MediaTypeBadge, b.MediaTypeBadge, StringComparison.Ordinal)
                 && a.IsMediaLoading == b.IsMediaLoading
                 && a.HasMediaFailed == b.HasMediaFailed
@@ -1204,6 +1273,10 @@ namespace Vianigram.App.ViewModels
                 && a.FileSizeBytes == b.FileSizeBytes
                 && string.Equals(a.FileMime, b.FileMime, StringComparison.Ordinal)
                 && string.Equals(a.FilePath, b.FilePath, StringComparison.Ordinal)
+                && a.FileRemoteId == b.FileRemoteId
+                && a.FileAccessHash == b.FileAccessHash
+                && SameBytes(a.FileReference, b.FileReference)
+                && a.FileDcId == b.FileDcId
                 && a.DownloadedBytes == b.DownloadedBytes
                 && a.TotalBytes == b.TotalBytes
                 && a.IsDownloaded == b.IsDownloaded
@@ -1332,7 +1405,6 @@ namespace Vianigram.App.ViewModels
                 {
                     EnrichWithAuthor(row, m, peerCache, isGroup, ref lastFromId);
                     built.Add(row);
-                    MaybeKickPhotoThumbFetch(row, m);
                 }
             }
             for (int i = built.Count - 1; i >= 0; i--)
@@ -1387,28 +1459,43 @@ namespace Vianigram.App.ViewModels
             return cache;
         }
 
-        // Lazily-resolved fetcher for sharp medium-size message thumbnails.
         // Mirrors the PeerAvatarFetcher pattern in ChatListPageViewModel —
-        // a single
-        // process-wide instance memoises completed downloads so
-        // re-entering the same chat doesn't re-fetch every photo.
-        private static Vianigram.App.Services.MessageThumbnailFetcher _thumbFetcher;
-        private static readonly object _thumbFetcherGate = new object();
+        private static Vianigram.App.Services.DocumentFileFetcher _documentFetcher;
+        private static readonly object _documentFetcherGate = new object();
+        private static Vianigram.App.Services.ProgressiveMediaFileFetcher _progressiveMediaFetcher;
+        private static readonly object _progressiveMediaFetcherGate = new object();
 
-        private static Vianigram.App.Services.MessageThumbnailFetcher ResolveThumbFetcher()
+        private static Vianigram.App.Services.DocumentFileFetcher ResolveDocumentFetcher()
         {
-            if (_thumbFetcher != null) return _thumbFetcher;
-            lock (_thumbFetcherGate)
+            if (_documentFetcher != null) return _documentFetcher;
+            lock (_documentFetcherGate)
             {
-                if (_thumbFetcher != null) return _thumbFetcher;
+                if (_documentFetcher != null) return _documentFetcher;
                 if (App.Composition == null) return null;
                 Vianigram.Media.Ports.Inbound.IMediaApi media;
                 Vianigram.Media.Ports.Outbound.IMediaCache cache;
                 if (!App.Composition.TryResolve<Vianigram.Media.Ports.Inbound.IMediaApi>(out media) || media == null) return null;
                 if (!App.Composition.TryResolve<Vianigram.Media.Ports.Outbound.IMediaCache>(out cache) || cache == null) return null;
-                var log = AppLog.For("App.MessageThumbnailFetcher");
-                _thumbFetcher = new Vianigram.App.Services.MessageThumbnailFetcher(media, cache, log);
-                return _thumbFetcher;
+                var log = AppLog.For("App.DocumentFileFetcher");
+                _documentFetcher = new Vianigram.App.Services.DocumentFileFetcher(media, cache, log);
+                return _documentFetcher;
+            }
+        }
+
+        private static Vianigram.App.Services.ProgressiveMediaFileFetcher ResolveProgressiveMediaFetcher()
+        {
+            if (_progressiveMediaFetcher != null) return _progressiveMediaFetcher;
+            lock (_progressiveMediaFetcherGate)
+            {
+                if (_progressiveMediaFetcher != null) return _progressiveMediaFetcher;
+                if (App.Composition == null) return null;
+                Vianigram.Media.Ports.Inbound.IMediaApi media;
+                Vianigram.Media.Ports.Outbound.IMediaCache cache;
+                if (!App.Composition.TryResolve<Vianigram.Media.Ports.Inbound.IMediaApi>(out media) || media == null) return null;
+                if (!App.Composition.TryResolve<Vianigram.Media.Ports.Outbound.IMediaCache>(out cache) || cache == null) return null;
+                var log = AppLog.For("App.ProgressiveMedia");
+                _progressiveMediaFetcher = new Vianigram.App.Services.ProgressiveMediaFileFetcher(media, cache, log);
+                return _progressiveMediaFetcher;
             }
         }
 
@@ -1426,41 +1513,27 @@ namespace Vianigram.App.ViewModels
         /// </summary>
         private void MaybeKickPhotoThumbFetch(MessageRow row, Message m)
         {
-            if (row == null || m == null) return;
-            if (row.Kind != MessageRowKind.Photo) return;
-            if (!string.IsNullOrEmpty(row.MediaFullPath)) return;
-            if (!string.IsNullOrEmpty(row.MediaSource)) return;
-
-            MessageContentPhoto photo = m.Content as MessageContentPhoto;
-            if (photo == null || photo.File == null) return;
-
-            Vianigram.App.Services.MessageThumbnailFetcher fetcher = ResolveThumbFetcher();
-            if (fetcher == null) return;
-
-            MessageRow target = row;
-            TelegramMediaFile file = photo.File;
-            IList<MediaThumbnail> thumbs = photo.Thumbnails;
-            var ignore = FetchThumbAndAssignAsync(fetcher, file, thumbs, target);
-            GC.KeepAlive(ignore);
+            // Message media downloads are explicit user actions only.
         }
 
-        private async Task FetchThumbAndAssignAsync(
-            Vianigram.App.Services.MessageThumbnailFetcher fetcher,
-            TelegramMediaFile file,
-            IList<MediaThumbnail> thumbs,
-            MessageRow targetRow)
+        private static Task FetchThumbAndAssignAsync()
         {
+            return Task.FromResult<object>(null);
+#if false
             try
             {
-                using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(2)))
+                using (var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2)))
+                using (var linked = CancellationTokenSource.CreateLinkedTokenSource(lifecycleToken, timeout.Token))
                 {
-                    string path = await fetcher.FetchAsync(file, thumbs, cts.Token).ConfigureAwait(true);
+                    string path = await fetcher.FetchAsync(file, thumbs, linked.Token).ConfigureAwait(true);
+                    if (linked.IsCancellationRequested) return;
                     if (string.IsNullOrEmpty(path)) return;
                     if (Messages == null) return;
                     for (int i = 0; i < Messages.Count; i++)
                     {
                         MessageRow existing = Messages[i];
                         if (!ReferenceEquals(existing, targetRow)) continue;
+                        if (linked.IsCancellationRequested) return;
                         // Reference-equal slot — clone, mutate, replace
                         // so the ObservableCollection fires Replace and
                         // PhotoBubble re-evaluates ImageSource.
@@ -1475,11 +1548,399 @@ namespace Vianigram.App.ViewModels
                     }
                 }
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 AppLog.For("App.ChatPage").Info(
                     "thumb.fetch swallowed " + ex.GetType().Name + ": " + ex.Message);
             }
+#endif
+        }
+
+        public async Task<string> DownloadDocumentAsync(MessageRow row, CancellationToken ct)
+        {
+            if (row == null) return null;
+            if (!string.IsNullOrEmpty(row.FilePath)) return row.FilePath;
+
+            Vianigram.App.Services.DocumentFileFetcher fetcher = ResolveDocumentFetcher();
+            if (fetcher == null ||
+                row.FileRemoteId == 0L ||
+                row.FileAccessHash == 0L ||
+                row.FileDcId <= 0)
+            {
+                ReplaceDocumentRow(row, null, false, false, true, 0.0);
+                return null;
+            }
+
+            ReplaceDocumentRow(row, null, false, true, false, 0.0);
+
+            string path = null;
+            try
+            {
+                using (var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token))
+                {
+                    path = await fetcher.FetchAsync(
+                        row.FileRemoteId,
+                        row.FileAccessHash,
+                        row.FileReference,
+                        row.FileDcId,
+                        row.FileName,
+                        row.FileMime,
+                        row.TotalBytes > 0 ? row.TotalBytes : row.FileSizeBytes,
+                        linked.Token).ConfigureAwait(true);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                path = null;
+            }
+            catch (Exception ex)
+            {
+                AppLog.For("App.ChatPage").Info(
+                    "doc.fetch swallowed " + ex.GetType().Name + ": " + ex.Message);
+                path = null;
+            }
+
+            if (string.IsNullOrEmpty(path))
+            {
+                ReplaceDocumentRow(row, null, false, false, true, 0.0);
+                return null;
+            }
+
+            ReplaceDocumentRow(row, path, true, false, false, 100.0);
+            return path;
+        }
+
+        public async Task<string> BufferMediaAsync(MessageRow row, CancellationToken ct)
+        {
+            if (row == null) return null;
+            if (IsAudioRow(row) && !string.IsNullOrEmpty(row.AudioSource)) return row.AudioSource;
+            if (IsVisualMediaRow(row) && !string.IsNullOrEmpty(row.MediaFullPath)) return row.MediaFullPath;
+
+            if (!CanProgressivelyBuffer(row))
+                return await DownloadMediaAsync(row, ct).ConfigureAwait(true);
+
+            Vianigram.App.Services.ProgressiveMediaFileFetcher fetcher = ResolveProgressiveMediaFetcher();
+            if (fetcher == null)
+                return await DownloadMediaAsync(row, ct).ConfigureAwait(true);
+
+            ReplaceMediaRow(row, null, true, false, 0.0);
+
+            Vianigram.App.Services.ProgressiveMediaFetchResult result = null;
+            CancellationTokenSource timeout = null;
+            CancellationTokenSource linked = null;
+            try
+            {
+                timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
+                linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
+                result = await fetcher.FetchDocumentMediaAsync(
+                    row.MediaRemoteId,
+                    row.MediaAccessHash,
+                    row.MediaFileReference,
+                    row.MediaDcId,
+                    row.MediaFileName,
+                    row.MediaMime,
+                    row.MediaSizeBytes,
+                    ToFileType(row.MediaFileType),
+                    p => ApplyProgressiveMediaProgress(row, p),
+                    linked.Token).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+                result = null;
+            }
+            catch (Exception ex)
+            {
+                AppLog.For("App.ChatPage").Info(
+                    "media.buffer swallowed " + ex.GetType().Name + ": " + ex.Message);
+                result = null;
+            }
+            finally
+            {
+                if (result == null || result.Completion == null || result.IsComplete)
+                {
+                    if (linked != null) linked.Dispose();
+                    if (timeout != null) timeout.Dispose();
+                }
+                else
+                {
+                    DisposeWhenComplete(result.Completion, linked, timeout);
+                }
+            }
+
+            if (result == null || string.IsNullOrEmpty(result.LocalPath))
+            {
+                ReplaceMediaRow(row, null, false, true, 0.0);
+                return null;
+            }
+
+            // Once a playable buffer exists, make the row feel playable.
+            // Background range fetching continues through result.Completion.
+            ReplaceMediaRow(row, result.LocalPath, false, false, 100.0);
+            TrackProgressiveCompletion(row, result);
+            return result.LocalPath;
+        }
+
+        public async Task<string> DownloadMediaAsync(MessageRow row, CancellationToken ct)
+        {
+            if (row == null) return null;
+            if (IsAudioRow(row) && !string.IsNullOrEmpty(row.AudioSource)) return row.AudioSource;
+            if (IsVisualMediaRow(row) && !string.IsNullOrEmpty(row.MediaFullPath)) return row.MediaFullPath;
+
+            Vianigram.App.Services.DocumentFileFetcher fetcher = ResolveDocumentFetcher();
+            if (fetcher == null ||
+                row.MediaLocationKind == MessageMediaLocationKind.None ||
+                row.MediaRemoteId == 0L ||
+                row.MediaAccessHash == 0L ||
+                row.MediaDcId <= 0)
+            {
+                ReplaceMediaRow(row, null, false, true, 0.0);
+                return null;
+            }
+
+            ReplaceMediaRow(row, null, true, false, 0.0);
+
+            string path = null;
+            try
+            {
+                using (var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(8)))
+                using (var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token))
+                {
+                    if (row.MediaLocationKind == MessageMediaLocationKind.Photo)
+                    {
+                        path = await fetcher.FetchPhotoAsync(
+                            row.MediaRemoteId,
+                            row.MediaAccessHash,
+                            row.MediaFileReference,
+                            row.MediaDcId,
+                            row.MediaThumbSize,
+                            row.MediaSizeBytes,
+                            linked.Token).ConfigureAwait(true);
+                    }
+                    else
+                    {
+                        FileType type = ToFileType(row.MediaFileType);
+                        path = await fetcher.FetchDocumentMediaAsync(
+                            row.MediaRemoteId,
+                            row.MediaAccessHash,
+                            row.MediaFileReference,
+                            row.MediaDcId,
+                            row.MediaFileName,
+                            row.MediaMime,
+                            row.MediaSizeBytes,
+                            type,
+                            linked.Token).ConfigureAwait(true);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                path = null;
+            }
+            catch (Exception ex)
+            {
+                AppLog.For("App.ChatPage").Info(
+                    "media.fetch swallowed " + ex.GetType().Name + ": " + ex.Message);
+                path = null;
+            }
+
+            if (string.IsNullOrEmpty(path))
+            {
+                ReplaceMediaRow(row, null, false, true, 0.0);
+                return null;
+            }
+
+            ReplaceMediaRow(row, path, false, false, 100.0);
+            return path;
+        }
+
+        private void ApplyProgressiveMediaProgress(
+            MessageRow row,
+            Vianigram.App.Services.ProgressiveMediaProgress progress)
+        {
+            if (row == null || progress == null) return;
+
+            double percent = progress.Percent;
+            if (progress.IsPlayable)
+            {
+                // Playable means we should show the normal play affordance,
+                // not an endless download spinner.
+                percent = 100.0;
+            }
+
+            var ignored = Dispatch.OnUiAsync(() =>
+            {
+                string path = progress.IsPlayable ? progress.LocalPath : null;
+                ReplaceMediaRow(row, path, !progress.IsPlayable, false, percent);
+            });
+            GC.KeepAlive(ignored);
+        }
+
+        private void TrackProgressiveCompletion(
+            MessageRow row,
+            Vianigram.App.Services.ProgressiveMediaFetchResult result)
+        {
+            if (row == null || result == null || result.Completion == null || result.IsComplete)
+                return;
+
+            var ignored = CompleteProgressiveMediaAsync(row, result);
+            GC.KeepAlive(ignored);
+        }
+
+        private static void DisposeWhenComplete(
+            Task completion,
+            CancellationTokenSource linked,
+            CancellationTokenSource timeout)
+        {
+            if (completion == null)
+            {
+                if (linked != null) linked.Dispose();
+                if (timeout != null) timeout.Dispose();
+                return;
+            }
+
+            completion.ContinueWith(delegate
+            {
+                if (linked != null) linked.Dispose();
+                if (timeout != null) timeout.Dispose();
+            }, TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        private async Task CompleteProgressiveMediaAsync(
+            MessageRow row,
+            Vianigram.App.Services.ProgressiveMediaFetchResult result)
+        {
+            try
+            {
+                await result.Completion.ConfigureAwait(false);
+                await Dispatch.OnUiAsync(() =>
+                {
+                    ReplaceMediaRow(row, result.LocalPath, false, false, 100.0);
+                }).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                AppLog.For("App.ChatPage").Info(
+                    "media.buffer completion swallowed " + ex.GetType().Name + ": " + ex.Message);
+            }
+        }
+
+        private void ReplaceDocumentRow(
+            MessageRow targetRow,
+            string filePath,
+            bool isDownloaded,
+            bool isDownloading,
+            bool hasFailed,
+            double progress)
+        {
+            if (targetRow == null || Messages == null) return;
+            for (int i = 0; i < Messages.Count; i++)
+            {
+                MessageRow existing = Messages[i];
+                if (!ReferenceEquals(existing, targetRow) &&
+                    !string.Equals(RowKey(existing), RowKey(targetRow), StringComparison.Ordinal))
+                    continue;
+
+                MessageRow updated = CloneRow(existing);
+                if (!string.IsNullOrEmpty(filePath)) updated.FilePath = filePath;
+                updated.IsDownloaded = isDownloaded;
+                updated.IsDownloading = isDownloading;
+                updated.HasDownloadFailed = hasFailed;
+                updated.DownloadProgress = progress;
+                updated.DownloadedBytes = isDownloaded
+                    ? (updated.TotalBytes > 0 ? updated.TotalBytes : updated.FileSizeBytes)
+                    : 0L;
+                Messages[i] = updated;
+                return;
+            }
+        }
+
+        private void ReplaceMediaRow(
+            MessageRow targetRow,
+            string filePath,
+            bool isDownloading,
+            bool hasFailed,
+            double progress)
+        {
+            if (targetRow == null || Messages == null) return;
+            for (int i = 0; i < Messages.Count; i++)
+            {
+                MessageRow existing = Messages[i];
+                if (!ReferenceEquals(existing, targetRow) &&
+                    !string.Equals(RowKey(existing), RowKey(targetRow), StringComparison.Ordinal))
+                    continue;
+
+                MessageRow updated = CloneRow(existing);
+                if (IsAudioRow(updated))
+                {
+                    if (!string.IsNullOrEmpty(filePath))
+                    {
+                        updated.AudioSource = filePath;
+                        updated.FilePath = filePath;
+                        updated.IsDownloaded = true;
+                    }
+                    updated.IsDownloading = isDownloading;
+                    updated.HasDownloadFailed = hasFailed;
+                    updated.DownloadProgress = progress;
+                    updated.DownloadedBytes = !string.IsNullOrEmpty(filePath)
+                        ? (updated.MediaSizeBytes > 0 ? updated.MediaSizeBytes : updated.TotalBytes)
+                        : 0L;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(filePath))
+                    {
+                        updated.MediaFullPath = filePath;
+                        if (updated.Kind == MessageRowKind.Photo)
+                            updated.MediaSource = filePath;
+                    }
+                    updated.IsMediaLoading = isDownloading;
+                    updated.HasMediaFailed = hasFailed;
+                    updated.MediaDownloadProgress = progress;
+                }
+
+                Messages[i] = updated;
+                return;
+            }
+        }
+
+        private static bool IsVisualMediaRow(MessageRow row)
+        {
+            return row != null &&
+                (row.Kind == MessageRowKind.Photo ||
+                 row.Kind == MessageRowKind.Video ||
+                 row.Kind == MessageRowKind.VideoNote ||
+                 row.Kind == MessageRowKind.Animation);
+        }
+
+        private static bool IsAudioRow(MessageRow row)
+        {
+            return row != null &&
+                (row.Kind == MessageRowKind.Voice ||
+                 row.Kind == MessageRowKind.Audio);
+        }
+
+        private static bool CanProgressivelyBuffer(MessageRow row)
+        {
+            if (row == null) return false;
+            if (row.MediaLocationKind != MessageMediaLocationKind.Document) return false;
+            if (row.MediaRemoteId == 0L || row.MediaAccessHash == 0L || row.MediaDcId <= 0) return false;
+            return row.Kind == MessageRowKind.Video ||
+                   row.Kind == MessageRowKind.VideoNote ||
+                   row.Kind == MessageRowKind.Animation ||
+                   row.Kind == MessageRowKind.Voice ||
+                   row.Kind == MessageRowKind.Audio;
+        }
+
+        private static FileType ToFileType(int value)
+        {
+            if (value == (int)FileType.Photo) return FileType.Photo;
+            if (value == (int)FileType.Video) return FileType.Video;
+            if (value == (int)FileType.Voice) return FileType.Voice;
+            if (value == (int)FileType.Sticker) return FileType.Sticker;
+            if (value == (int)FileType.Document) return FileType.Document;
+            return FileType.Document;
         }
 
         private static bool IsGroupOrChannel(string peerKey)
@@ -1593,6 +2054,13 @@ namespace Vianigram.App.ViewModels
         DaySeparator = 15
     }
 
+    public enum MessageMediaLocationKind
+    {
+        None = 0,
+        Photo = 1,
+        Document = 2
+    }
+
     /// <summary>
     /// Single bubble in ChatPage. Public + sealed so .NET Native can reflect.
     /// Carries every property the bubble templates bind to. Properties not
@@ -1631,6 +2099,16 @@ namespace Vianigram.App.ViewModels
         public string MediaFullPath { get; set; }
         public string MediaSource { get; set; }
         public byte[] MediaPreviewBytes { get; set; }
+        public MessageMediaLocationKind MediaLocationKind { get; set; }
+        public int MediaFileType { get; set; }
+        public long MediaRemoteId { get; set; }
+        public long MediaAccessHash { get; set; }
+        public byte[] MediaFileReference { get; set; }
+        public int MediaDcId { get; set; }
+        public long MediaSizeBytes { get; set; }
+        public string MediaMime { get; set; }
+        public string MediaFileName { get; set; }
+        public string MediaThumbSize { get; set; }
         public string MediaTypeBadge { get; set; }    // e.g. "\ud83d\udcf7 photo", "\u25b6 video 0:42", "\ud83c\udf9e GIF"
         public bool IsMediaLoading { get; set; }
         public bool HasMediaFailed { get; set; }
@@ -1652,6 +2130,10 @@ namespace Vianigram.App.ViewModels
         public long FileSizeBytes { get; set; }
         public string FileMime { get; set; }
         public string FilePath { get; set; }
+        public long FileRemoteId { get; set; }
+        public long FileAccessHash { get; set; }
+        public byte[] FileReference { get; set; }
+        public int FileDcId { get; set; }
         public long DownloadedBytes { get; set; }
         public long TotalBytes { get; set; }
         public bool IsDownloaded { get; set; }
@@ -1725,6 +2207,16 @@ namespace Vianigram.App.ViewModels
                 MediaFullPath = string.Empty,
                 MediaSource = string.Empty,
                 MediaPreviewBytes = null,
+                MediaLocationKind = MessageMediaLocationKind.None,
+                MediaFileType = (int)FileType.Unknown,
+                MediaRemoteId = 0,
+                MediaAccessHash = 0,
+                MediaFileReference = null,
+                MediaDcId = 0,
+                MediaSizeBytes = 0,
+                MediaMime = string.Empty,
+                MediaFileName = string.Empty,
+                MediaThumbSize = string.Empty,
                 MediaTypeBadge = string.Empty,
                 IsMediaLoading = false,
                 HasMediaFailed = false,
@@ -1742,6 +2234,10 @@ namespace Vianigram.App.ViewModels
                 FileSizeBytes = 0,
                 FileMime = string.Empty,
                 FilePath = string.Empty,
+                FileRemoteId = 0,
+                FileAccessHash = 0,
+                FileReference = null,
+                FileDcId = 0,
                 DownloadedBytes = 0,
                 TotalBytes = 0,
                 IsDownloaded = false,
@@ -1804,6 +2300,16 @@ namespace Vianigram.App.ViewModels
                 MediaFullPath = string.Empty,
                 MediaSource = string.Empty,
                 MediaPreviewBytes = null,
+                MediaLocationKind = MessageMediaLocationKind.None,
+                MediaFileType = (int)FileType.Unknown,
+                MediaRemoteId = 0,
+                MediaAccessHash = 0,
+                MediaFileReference = null,
+                MediaDcId = 0,
+                MediaSizeBytes = 0,
+                MediaMime = string.Empty,
+                MediaFileName = string.Empty,
+                MediaThumbSize = string.Empty,
                 MediaTypeBadge = string.Empty,
                 IsMediaLoading = false,
                 HasMediaFailed = false,
@@ -1821,6 +2327,10 @@ namespace Vianigram.App.ViewModels
                 FileSizeBytes = 0,
                 FileMime = string.Empty,
                 FilePath = string.Empty,
+                FileRemoteId = 0,
+                FileAccessHash = 0,
+                FileReference = null,
+                FileDcId = 0,
                 DownloadedBytes = 0,
                 TotalBytes = 0,
                 IsDownloaded = false,
@@ -1883,8 +2393,13 @@ namespace Vianigram.App.ViewModels
                 row.MediaFullPath = ChooseMediaFullPath(photo.LocalFullPath, photo.File);
                 row.MediaSource = ChooseMediaSource(row.MediaFullPath, row.MediaThumbPath, photo.Thumbnails);
                 row.MediaPreviewBytes = ChoosePreviewBytes(photo.Thumbnails);
+                MediaThumbnail photoDownloadThumb = ChooseDownloadThumb(photo.Thumbnails);
+                ApplyMediaDownloadMetadata(row, photo.File, MessageMediaLocationKind.Photo,
+                    FileType.Photo, "photo.jpg", "image/jpeg",
+                    photoDownloadThumb != null ? photoDownloadThumb.Size : 0L,
+                    photoDownloadThumb != null ? photoDownloadThumb.SizeType : string.Empty);
                 row.CaptionEntities = photo.CaptionEntities ?? EmptyEntities();
-                row.IsMediaLoading = string.IsNullOrEmpty(row.MediaSource) && !HasBytes(row.MediaPreviewBytes) && photo.File != null;
+                row.IsMediaLoading = false;
                 row.MediaDownloadProgress = string.IsNullOrEmpty(row.MediaSource) && !HasBytes(row.MediaPreviewBytes) ? 0.0 : 100.0;
                 row.MediaTypeBadge = "photo";
                 row.Text = string.IsNullOrEmpty(photo.Caption) ? "\ud83d\udcf7 photo" : photo.Caption;
@@ -1902,11 +2417,14 @@ namespace Vianigram.App.ViewModels
                 row.MediaHeight = video.Height;
                 row.MediaThumbPath = video.LocalThumbPath ?? string.Empty;
                 row.MediaFullPath = ChooseMediaFullPath(video.LocalFullPath, video.File);
-                row.MediaSource = ChooseMediaSource(row.MediaFullPath, row.MediaThumbPath, video.Thumbnails);
+                row.MediaSource = ChooseMediaSource(string.Empty, row.MediaThumbPath, video.Thumbnails);
                 row.MediaPreviewBytes = ChoosePreviewBytes(video.Thumbnails);
+                ApplyMediaDownloadMetadata(row, video.File, MessageMediaLocationKind.Document,
+                    FileType.Video, "video.mp4", "video/mp4", video.Size, string.Empty);
                 row.CaptionEntities = video.CaptionEntities ?? EmptyEntities();
-                row.IsMediaLoading = string.IsNullOrEmpty(row.MediaSource) && !HasBytes(row.MediaPreviewBytes) && video.File != null;
-                row.MediaDownloadProgress = string.IsNullOrEmpty(row.MediaSource) && !HasBytes(row.MediaPreviewBytes) ? 0.0 : 100.0;
+                bool hasVideoFile = !string.IsNullOrEmpty(row.MediaFullPath);
+                row.IsMediaLoading = false;
+                row.MediaDownloadProgress = hasVideoFile || !string.IsNullOrEmpty(row.MediaSource) || HasBytes(row.MediaPreviewBytes) ? 100.0 : 0.0;
                 row.DurationLabel = FormatDuration(video.Duration);
                 row.DurationSeconds = ToSeconds(video.Duration);
                 row.MediaTypeBadge = video.IsAnimation ? "GIF"
@@ -1924,6 +2442,8 @@ namespace Vianigram.App.ViewModels
                 row.DurationSeconds = ToSeconds(voice.Duration);
                 row.AudioSource = ChooseMediaFullPath(voice.LocalPath, voice.File);
                 row.WaveformData = voice.Waveform ?? EmptyWaveform();
+                ApplyMediaDownloadMetadata(row, voice.File, MessageMediaLocationKind.Document,
+                    FileType.Voice, "voice.ogg", "audio/ogg", 0L, string.Empty);
                 row.FilePath = row.AudioSource;
                 row.IsDownloaded = !string.IsNullOrEmpty(row.AudioSource);
                 row.DownloadProgress = row.IsDownloaded ? 100.0 : 0.0;
@@ -1940,6 +2460,9 @@ namespace Vianigram.App.ViewModels
                 row.DurationLabel = FormatDuration(audio.Duration);
                 row.DurationSeconds = ToSeconds(audio.Duration);
                 row.AudioSource = ChooseMediaFullPath(audio.LocalFullPath, audio.File);
+                ApplyMediaDownloadMetadata(row, audio.File, MessageMediaLocationKind.Document,
+                    FileType.Document, string.IsNullOrEmpty(audio.Title) ? "audio.mp3" : audio.Title + ".mp3",
+                    "audio/mpeg", audio.Size, string.Empty);
                 row.FilePath = row.AudioSource;
                 row.IsDownloaded = !string.IsNullOrEmpty(row.AudioSource);
                 row.DownloadProgress = row.IsDownloaded ? 100.0 : 0.0;
@@ -1956,14 +2479,33 @@ namespace Vianigram.App.ViewModels
             {
                 row.Kind = MessageRowKind.Document;
                 row.FileName = string.IsNullOrEmpty(doc.FileName) ? "file" : doc.FileName;
-                row.FileSizeLabel = FormatFileSize(doc.Size);
                 row.FileSizeBytes = doc.Size;
                 row.FileMime = doc.MimeType ?? string.Empty;
                 row.FilePath = ChooseMediaFullPath(doc.LocalFullPath, doc.File);
                 row.TotalBytes = doc.Size;
+                TelegramMediaFile file = doc.File;
+                if (file != null)
+                {
+                    row.FileRemoteId = ParseFileId(file.FileId);
+                    row.FileAccessHash = file.AccessHash;
+                    row.FileReference = file.FileReference;
+                    row.FileDcId = file.DcId;
+                    if (row.FileSizeBytes <= 0 && file.Size > 0) row.FileSizeBytes = file.Size;
+                    if (row.TotalBytes <= 0 && file.Size > 0) row.TotalBytes = file.Size;
+                    if (string.IsNullOrEmpty(row.FileMime)) row.FileMime = file.MimeType ?? string.Empty;
+                    if ((string.IsNullOrEmpty(row.FileName) || string.Equals(row.FileName, "file", StringComparison.Ordinal)) &&
+                        !string.IsNullOrEmpty(file.FileName))
+                    {
+                        row.FileName = file.FileName;
+                    }
+                }
+                row.FileSizeLabel = FormatFileSize(row.FileSizeBytes);
                 row.IsDownloaded = !string.IsNullOrEmpty(row.FilePath);
                 row.DownloadProgress = row.IsDownloaded ? 100.0 : 0.0;
-                row.FileIconGlyph = PickFileGlyph(doc.MimeType, doc.FileName);
+                row.DownloadedBytes = row.IsDownloaded
+                    ? (row.TotalBytes > 0 ? row.TotalBytes : row.FileSizeBytes)
+                    : 0L;
+                row.FileIconGlyph = PickFileGlyph(row.FileMime, row.FileName);
                 row.MediaCaption = doc.Caption ?? string.Empty;
                 row.CaptionEntities = doc.CaptionEntities ?? EmptyEntities();
                 row.Text = string.IsNullOrEmpty(doc.Caption)
@@ -2037,7 +2579,7 @@ namespace Vianigram.App.ViewModels
                 row.WebPageDescription = web.Description ?? string.Empty;
                 row.WebPageUrl = web.Url ?? string.Empty;
                 row.WebPageDisplayUrl = string.IsNullOrEmpty(web.DisplayUrl) ? web.Url : web.DisplayUrl;
-                row.WebPageThumbPath = FirstNonEmpty(web.ThumbPath, web.Thumb != null ? web.Thumb.LocalPath : string.Empty, web.ThumbUrl);
+                row.WebPageThumbPath = FirstNonEmpty(web.ThumbPath, web.Thumb != null ? web.Thumb.LocalPath : string.Empty);
                 row.WebPageUri = BuildWebUri(row.WebPageUrl);
                 row.Text = string.IsNullOrEmpty(web.Body) ? web.Url : web.Body;
                 return;
@@ -2097,6 +2639,69 @@ namespace Vianigram.App.ViewModels
             return FirstNonEmpty(file.LocalFullPath, file.LocalPath);
         }
 
+        private static void ApplyMediaDownloadMetadata(
+            MessageRow row,
+            TelegramMediaFile file,
+            MessageMediaLocationKind locationKind,
+            FileType fileType,
+            string fallbackName,
+            string fallbackMime,
+            long fallbackSize,
+            string thumbSize)
+        {
+            if (row == null || file == null) return;
+
+            row.MediaLocationKind = locationKind;
+            row.MediaFileType = (int)fileType;
+            row.MediaRemoteId = ParseFileId(file.FileId);
+            row.MediaAccessHash = file.AccessHash;
+            row.MediaFileReference = file.FileReference;
+            row.MediaDcId = file.DcId;
+            row.MediaSizeBytes = file.Size > 0 ? file.Size : fallbackSize;
+            row.MediaMime = FirstNonEmpty(file.MimeType, fallbackMime);
+            row.MediaFileName = FirstNonEmpty(file.FileName, fallbackName);
+            row.MediaThumbSize = thumbSize ?? string.Empty;
+        }
+
+        private static MediaThumbnail ChooseDownloadThumb(IList<MediaThumbnail> thumbnails)
+        {
+            if (thumbnails == null || thumbnails.Count == 0) return null;
+
+            MediaThumbnail best = null;
+            long bestArea = -1;
+            int bestRank = int.MaxValue;
+            for (int i = 0; i < thumbnails.Count; i++)
+            {
+                MediaThumbnail t = thumbnails[i];
+                if (t == null) continue;
+                if (t.Bytes != null && t.Bytes.Length > 0) continue;
+                if (string.IsNullOrEmpty(t.SizeType)) continue;
+
+                long area = (long)Math.Max(0, t.Width) * (long)Math.Max(0, t.Height);
+                int rank = RankPhotoSizeType(t.SizeType);
+                if (best == null || area > bestArea || (area == bestArea && rank < bestRank))
+                {
+                    best = t;
+                    bestArea = area;
+                    bestRank = rank;
+                }
+            }
+            return best;
+        }
+
+        private static int RankPhotoSizeType(string sizeType)
+        {
+            switch (sizeType)
+            {
+                case "w": return 0;
+                case "y": return 1;
+                case "x": return 2;
+                case "m": return 3;
+                case "s": return 4;
+                default: return 100;
+            }
+        }
+
         private static string ChooseMediaSource(string fullPath, string thumbPath, IList<MediaThumbnail> thumbnails)
         {
             string source = FirstNonEmpty(fullPath, thumbPath);
@@ -2107,7 +2712,7 @@ namespace Vianigram.App.ViewModels
             {
                 MediaThumbnail t = thumbnails[i];
                 if (t == null) continue;
-                source = FirstNonEmpty(t.LocalPath, t.Url);
+                source = t.LocalPath;
                 if (!string.IsNullOrEmpty(source)) return source;
             }
 
@@ -2333,6 +2938,17 @@ namespace Vianigram.App.ViewModels
                     + ":" + d.Minutes.ToString("D2") + ":" + d.Seconds.ToString("D2");
             return d.Minutes.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 + ":" + d.Seconds.ToString("D2");
+        }
+
+        private static long ParseFileId(string fileId)
+        {
+            long value;
+            if (long.TryParse(fileId, System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out value))
+            {
+                return value;
+            }
+            return 0L;
         }
 
         private static string FormatFileSize(long bytes)

@@ -83,6 +83,7 @@
     <Compile Include="Tests\WebpDecoderSmokeTest.cs" />
     <Compile Include="Tests\CallsTlSmokeTest.cs" />
     <Compile Include="Tests\PeerCacheSmokeTest.cs" />
+    <Compile Include="Tests\QrLoginCompatibilitySmokeTest.cs" />
     <Compile Include="Tests\ProxyConfigSmokeTest.cs" />
     <Compile Include="Tests\MtProxyRuntimeSmokeTest.cs" />
     <Compile Include="Tests\ProxyPersistenceSmokeTest.cs" />

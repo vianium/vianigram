@@ -3,7 +3,7 @@
 
 // PushNotificationsService.cs — Vianigram.App.Services
 //
-// Wires the WP 8.1 MPNS push channel + Telegram's account.registerDevice
+// Wires the Windows Push Notification Services channel + Telegram's account.registerDevice
 // + a foreground toast surface for incoming messages. Two cooperating
 // layers:
 //
@@ -11,7 +11,7 @@
 //      PushNotificationChannel via
 //      PushNotificationChannelManager.CreatePushNotificationChannelForApplicationAsync()
 //      and POST its URI to Telegram via IAccountApi.RegisterPushDeviceAsync
-//      (token_type=8 = MPNS). The server then routes raw push payloads to
+//      (token_type=8 = WNS). The server then routes raw push payloads to
 //      that URI when our app is suspended.
 //
 //   2) Foreground toast surface. While the app is running we already
@@ -46,7 +46,9 @@ namespace Vianigram.App.Services
 {
     public sealed class PushNotificationsService : IDisposable
     {
-        private const int MpnsTokenType = 8; // Telegram TL: token_type for MPNS / Windows Phone
+        // Telegram push token types: 3 = MPNS, 8 = WNS. The WinRT
+        // PushNotificationChannelManager used here returns a WNS URI.
+        private const int WnsTokenType = 8;
 
         // Toast body truncation budget — matches Android Telegram's
         // NotificationsController.java limit. Bodies longer than this
@@ -122,23 +124,23 @@ namespace Vianigram.App.Services
         }
 
         /// <summary>
-        /// Acquire (or refresh) the MPNS channel and register its URI
+        /// Acquire (or refresh) the WNS channel and register its URI
         /// with Telegram. Safe to call multiple times — the channel is
         /// re-acquired (the URI may have rotated) and re-registered.
         /// Always wires the foreground toast surface on first call so
-        /// new messages produce toasts even if MPNS itself fails.
+        /// new messages produce toasts even if WNS itself fails.
         /// </summary>
         public async Task RegisterAsync(CancellationToken ct)
         {
             if (Volatile.Read(ref _disposed) != 0) return;
 
             // Foreground toast surface: subscribed before we attempt
-            // MPNS so the user benefits even if registration fails.
+            // WNS so the user benefits even if registration fails.
             EnsureForegroundToastSubscription();
 
             try
             {
-                _log.Info("push.register: requesting MPNS channel");
+                _log.Info("push.register: requesting WNS channel");
                 _channel = await PushNotificationChannelManager
                     .CreatePushNotificationChannelForApplicationAsync()
                     .AsTask(ct)
@@ -167,14 +169,24 @@ namespace Vianigram.App.Services
                 // (but not suspended).
                 _channel.PushNotificationReceived += OnPushNotificationReceived;
 
-                _log.Info("push.register: MPNS uri len=" + uri.Length +
+                _log.Info("push.register: WNS uri len=" + uri.Length +
                     " — POSTing to Telegram");
                 var registerResult = await _account.RegisterPushDeviceAsync(
-                    MpnsTokenType, uri, new byte[0], ct).ConfigureAwait(false);
+                    WnsTokenType, uri, new byte[0], ct).ConfigureAwait(false);
 
                 if (registerResult.IsFail)
                 {
-                    _log.Warn("push.register: account.registerDevice failed: " + registerResult.Error);
+                    string errText = registerResult.Error != null
+                        ? registerResult.Error.ToString()
+                        : string.Empty;
+                    if (errText.IndexOf("APP_PUSH_CREDENTIALS_MISSING", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _log.Warn("push.register: Telegram rejected WNS registration because app push credentials are missing server-side; foreground MTProto notifications remain active.");
+                    }
+                    else
+                    {
+                        _log.Warn("push.register: account.registerDevice failed: " + registerResult.Error);
+                    }
                     return;
                 }
 
@@ -192,7 +204,7 @@ namespace Vianigram.App.Services
         }
 
         /// <summary>
-        /// Drop the MPNS registration on logout. Fire-and-forget on the
+        /// Drop the WNS registration on logout. Fire-and-forget on the
         /// transport — best-effort; if the server doesn't ack we still
         /// scrub local state.
         /// </summary>
@@ -209,7 +221,7 @@ namespace Vianigram.App.Services
 
             try
             {
-                var r = await _account.UnregisterPushDeviceAsync(MpnsTokenType, token, ct).ConfigureAwait(false);
+                var r = await _account.UnregisterPushDeviceAsync(WnsTokenType, token, ct).ConfigureAwait(false);
                 if (r.IsFail) _log.Warn("push.unregister: " + r.Error);
                 else _log.Info("push.unregister: ok");
             }
@@ -556,7 +568,7 @@ namespace Vianigram.App.Services
         }
 
         // -----------------------------------------------------------------
-        // MPNS raw payload handler (foreground / background-but-running)
+        // WNS raw payload handler (foreground / background-but-running)
         // -----------------------------------------------------------------
 
         private void OnPushNotificationReceived(

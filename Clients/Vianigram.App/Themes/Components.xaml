@@ -12,6 +12,7 @@
 
     <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
     <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibility" />
+    <conv:ImagePathToImageSourceConverter x:Key="ImagePathToImageSource" />
 
     <Style x:Key="VgIconButtonStyle" TargetType="Button">
         <Setter Property="Width" Value="44" />

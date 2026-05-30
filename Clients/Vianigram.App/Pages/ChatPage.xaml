@@ -47,6 +47,7 @@
                            Foreground="{ThemeResource VgAccentBrush}" />
                 <bubbles:PhotoBubble ImageSource="{Binding MediaSource}"
                                      ImagePath="{Binding MediaFullPath}"
+                                     OpenPath="{Binding MediaFullPath}"
                                      PreviewBytes="{Binding MediaPreviewBytes}"
                                      Caption="{Binding MediaCaption}"
                                      CaptionEntities="{Binding CaptionEntities}"
@@ -55,7 +56,41 @@
                                      PhotoHeight="{Binding MediaHeight}"
                                      IsLoading="{Binding IsMediaLoading}"
                                      HasFailed="{Binding HasMediaFailed}"
-                                     DownloadProgress="{Binding MediaDownloadProgress}" />
+                                     DownloadProgress="{Binding MediaDownloadProgress}"
+                                     DownloadRequested="OnMediaDownloadRequested"
+                                     OpenRequested="OnMediaOpenRequested" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,12,4">
+                    <TextBlock Text="{Binding TimeLabel}" FontSize="11" Foreground="#B3FFFFFF" />
+                    <TextBlock Text="{Binding StatusLabel}" FontSize="11" Margin="5,0,0,0" Foreground="#D2FFFFFF" />
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Video / animation: show a thumbnail or placeholder, then open the
+             downloaded media in the full-screen native viewer. -->
+        <DataTemplate x:Key="VideoBubbleTemplate">
+            <StackPanel>
+                <TextBlock Text="{Binding AuthorLabel}"
+                           Visibility="{Binding ShowAuthor, Converter={StaticResource BoolToVisibility}}"
+                           Margin="14,6,86,0"
+                           FontFamily="{StaticResource VgFont}"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource VgAccentBrush}" />
+                <bubbles:PhotoBubble ImageSource="{Binding MediaSource}"
+                                     OpenPath="{Binding MediaFullPath}"
+                                     PreviewBytes="{Binding MediaPreviewBytes}"
+                                     Caption="{Binding MediaCaption}"
+                                     CaptionEntities="{Binding CaptionEntities}"
+                                     IsOutgoing="{Binding IsOutgoing}"
+                                     PhotoWidth="{Binding MediaWidth}"
+                                     PhotoHeight="{Binding MediaHeight}"
+                                     IsLoading="{Binding IsMediaLoading}"
+                                     HasFailed="{Binding HasMediaFailed}"
+                                     DownloadProgress="{Binding MediaDownloadProgress}"
+                                     OverlayText="{Binding MediaTypeBadge}"
+                                     DownloadRequested="OnMediaDownloadRequested"
+                                     OpenRequested="OnMediaOpenRequested" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,12,4">
                     <TextBlock Text="{Binding TimeLabel}" FontSize="11" Foreground="#B3FFFFFF" />
                     <TextBlock Text="{Binding StatusLabel}" FontSize="11" Margin="5,0,0,0" Foreground="#D2FFFFFF" />
@@ -81,7 +116,8 @@
                                      IsDownloading="{Binding IsDownloading}"
                                      HasFailed="{Binding HasDownloadFailed}"
                                      DownloadProgress="{Binding DownloadProgress}"
-                                     IsOutgoing="{Binding IsOutgoing}" />
+                                     IsOutgoing="{Binding IsOutgoing}"
+                                     DownloadRequested="OnAudioDownloadRequested" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,12,4">
                     <TextBlock Text="{Binding TimeLabel}" FontSize="11" Foreground="#B3FFFFFF" />
                     <TextBlock Text="{Binding StatusLabel}" FontSize="11" Margin="5,0,0,0" Foreground="#D2FFFFFF" />
@@ -125,7 +161,8 @@
                                      IsDownloading="{Binding IsDownloading}"
                                      HasFailed="{Binding HasDownloadFailed}"
                                      DownloadProgress="{Binding DownloadProgress}"
-                                     IsOutgoing="{Binding IsOutgoing}" />
+                                     IsOutgoing="{Binding IsOutgoing}"
+                                     DownloadRequested="OnAudioDownloadRequested" />
                 <TextBlock Text="{Binding MediaCaption}"
                            TextWrapping="Wrap"
                            FontSize="14"
@@ -157,7 +194,9 @@
                                         IsDownloading="{Binding IsDownloading}"
                                         HasFailed="{Binding HasDownloadFailed}"
                                         DownloadProgress="{Binding DownloadProgress}"
-                                        IsOutgoing="{Binding IsOutgoing}" />
+                                        IsOutgoing="{Binding IsOutgoing}"
+                                        DownloadRequested="OnDocumentDownloadRequested"
+                                        OpenRequested="OnDocumentOpenRequested" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,12,4">
                     <TextBlock Text="{Binding TimeLabel}" FontSize="11" Foreground="#B3FFFFFF" />
                     <TextBlock Text="{Binding StatusLabel}" FontSize="11" Margin="5,0,0,0" Foreground="#D2FFFFFF" />
@@ -313,7 +352,7 @@
                     <StackPanel>
                         <TextBlock Text="{Binding Text}" FontSize="14" Foreground="White" TextWrapping="Wrap"
                                    Visibility="{Binding Text, Converter={StaticResource StringNotEmptyToVisibility}}" />
-                        <Image Source="{Binding WebPageThumbPath}"
+                        <Image Source="{Binding WebPageThumbPath, Converter={StaticResource ImagePathToImageSource}}"
                                Stretch="UniformToFill"
                                Height="112"
                                Margin="0,8,0,0"
@@ -396,9 +435,9 @@
             PhotoTemplate="{StaticResource PhotoBubbleTemplate}"
             VoiceTemplate="{StaticResource VoiceBubbleTemplate}"
             AudioTemplate="{StaticResource AudioBubbleTemplate}"
-            VideoTemplate="{StaticResource PhotoBubbleTemplate}"
-            VideoNoteTemplate="{StaticResource PhotoBubbleTemplate}"
-            AnimationTemplate="{StaticResource PhotoBubbleTemplate}"
+            VideoTemplate="{StaticResource VideoBubbleTemplate}"
+            VideoNoteTemplate="{StaticResource VideoBubbleTemplate}"
+            AnimationTemplate="{StaticResource VideoBubbleTemplate}"
             DocumentTemplate="{StaticResource DocumentBubbleTemplate}"
             StickerTemplate="{StaticResource StickerBubbleTemplate}"
             ContactTemplate="{StaticResource ContactBubbleTemplate}"
@@ -432,6 +471,7 @@
             <controls:AvatarCircle Grid.Column="0"
                                    AvatarSize="42"
                                    Initials="{Binding PeerInitials}"
+                                   Image="{Binding PeerAvatarImage}"
                                    ColorSeed="{Binding PeerColorSeed}"
                                    Tapped="OnHeaderTapped"
                                    VerticalAlignment="Center" />
